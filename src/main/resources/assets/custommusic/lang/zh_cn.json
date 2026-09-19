@@ -47,6 +47,16 @@
   "custommusic.situational.toPlaylists": "改为选歌单",
   "custommusic.situational.done": "完成",
   "custommusic.situational.empty": "没枚举到配乐事件（先在播放器模式下扫描一次）",
+  "custommusic.situational.assigningGroup": "正在为「%s」（%s 个情境）分配：点一行加入或取消",
+  "custommusic.situational.clearGroup": "清空该分组",
+  "custommusic.preset.all": "全部情境",
+  "custommusic.preset.caves": "洞穴",
+  "custommusic.preset.nether": "下界",
+  "custommusic.preset.overworld": "主世界地表",
+  "custommusic.preset.end": "末地",
+  "custommusic.preset.underwater": "水下",
+  "custommusic.preset.menu": "主菜单",
+  "custommusic.preset.creative": "创造模式",
   "custommusic.playlist.hudOn": "右上角标签：开",
   "custommusic.playlist.hudOff": "右上角标签：关"
 }

@@ -12,6 +12,7 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import java.io.BufferedReader;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -64,6 +65,56 @@ public final class MusicEvents {
             Map.entry("swamp", "沼泽"));
 
     private MusicEvents() {
+    }
+
+    /** 一组情境的预设。id 以 preset: 开头，不会和事件 id（namespace:path）冲突。 */
+    public record Preset(String id, String nameKey, java.util.function.Predicate<String> matcher) {
+    }
+
+    /** 算作「洞穴」的几个群系（下界那些洞穴不算，它们归到下界组里更好用）。 */
+    private static final Set<String> CAVE_PATHS = Set.of(
+            "music.overworld.dripstone_caves",
+            "music.overworld.lush_caves",
+            "music.overworld.deep_dark",
+            "music.overworld.sulfur_caves");
+
+    /**
+     * 界面上提供的分组，省得一个个点 32 个情境。
+     * 顺序就是界面上的显示顺序，「全部」放最前面最顺手。
+     */
+    public static List<Preset> presets() {
+        return List.of(
+                new Preset("preset:all", "custommusic.preset.all", path -> true),
+                new Preset("preset:caves", "custommusic.preset.caves", CAVE_PATHS::contains),
+                new Preset("preset:nether", "custommusic.preset.nether", path -> path.startsWith("music.nether.")),
+                new Preset("preset:overworld", "custommusic.preset.overworld",
+                        path -> path.startsWith("music.overworld.") && !CAVE_PATHS.contains(path)),
+                new Preset("preset:end", "custommusic.preset.end", path -> path.equals("music.end")),
+                new Preset("preset:underwater", "custommusic.preset.underwater",
+                        path -> path.equals("music.under_water")),
+                new Preset("preset:menu", "custommusic.preset.menu", path -> path.equals("music.menu")),
+                new Preset("preset:creative", "custommusic.preset.creative",
+                        path -> path.equals("music.creative")));
+    }
+
+    public static Preset findPreset(String id) {
+        for (Preset preset : presets()) {
+            if (preset.id().equals(id)) {
+                return preset;
+            }
+        }
+        return null;
+    }
+
+    /** 把一个预设展开成实际的情境 id 列表。 */
+    public static List<String> expand(Preset preset, Map<String, SortedSet<String>> discovered) {
+        List<String> ids = new java.util.ArrayList<>();
+        discovered.forEach((namespace, keys) -> keys.forEach(key -> {
+            if (preset.matcher().test(key)) {
+                ids.add(namespace + ":" + key);
+            }
+        }));
+        return ids;
     }
 
     /** 把 "minecraft:music.nether.nether_wastes" 显示成「下界 · 下界荒地」。 */

@@ -47,6 +47,16 @@
   "custommusic.situational.toPlaylists": "Pick Playlists",
   "custommusic.situational.done": "Done",
   "custommusic.situational.empty": "No music events found (run a scan in player mode first)",
+  "custommusic.situational.assigningGroup": "Assigning for \"%s\" (%s contexts): click a row to add or remove",
+  "custommusic.situational.clearGroup": "Clear Group",
+  "custommusic.preset.all": "All contexts",
+  "custommusic.preset.caves": "Caves",
+  "custommusic.preset.nether": "Nether",
+  "custommusic.preset.overworld": "Overworld surface",
+  "custommusic.preset.end": "The End",
+  "custommusic.preset.underwater": "Underwater",
+  "custommusic.preset.menu": "Main menu",
+  "custommusic.preset.creative": "Creative",
   "custommusic.playlist.hudOn": "HUD: On",
   "custommusic.playlist.hudOff": "HUD: Off"
 }

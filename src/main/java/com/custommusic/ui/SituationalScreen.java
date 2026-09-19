@@ -79,13 +79,12 @@ public final class SituationalScreen extends Screen {
                                 rebuildWidgets();
                             })
                     .bounds(20, rowY, third, 20).build());
-            addRenderableWidget(Button.builder(Component.translatable("custommusic.situational.clearOne"), button -> {
-                if (target != null) {
-                    CustomMusicClient.config().assignments.remove(target);
-                    CustomMusicClient.config().save();
-                    SituationalEngine.reset();
-                }
-                refresh();
+            // 对着分组时按钮也叫「清空该分组」，别让人以为只清一个
+            addRenderableWidget(Button.builder(Component.translatable(
+                    MusicEvents.findPreset(target) != null
+                            ? "custommusic.situational.clearGroup"
+                            : "custommusic.situational.clearOne"), button -> {
+                clearTarget();
             }).bounds(20 + third + gap, rowY, third, 20).build());
             addRenderableWidget(Button.builder(Component.translatable(view == View.ASSIGN_PLAYLISTS
                                     ? "custommusic.situational.toTracks"
@@ -124,6 +123,18 @@ public final class SituationalScreen extends Screen {
         CustomMusicConfig config = CustomMusicClient.config();
 
         if (view == View.CONTEXTS) {
+            // 分组预设排在最前面，省得一个个点 32 个情境
+            for (MusicEvents.Preset preset : MusicEvents.presets()) {
+                List<String> members = MusicEvents.expand(preset, discovered);
+                if (members.isEmpty()) {
+                    continue;
+                }
+                boolean anyAssigned = members.stream()
+                        .anyMatch(id -> !assignedOf(id).isEmpty());
+                items.add(new SituationalListWidget.Item(SituationalListWidget.Kind.PRESET, preset.id(),
+                        Component.translatable(preset.nameKey()).getString(),
+                        members.size() + " 个情境", anyAssigned));
+            }
             for (String id : contextIds()) {
                 List<String> assigned = config.assignments.get(id);
                 items.add(new SituationalListWidget.Item(SituationalListWidget.Kind.CONTEXT, id,
@@ -131,13 +142,13 @@ public final class SituationalScreen extends Screen {
                         assigned != null && !assigned.isEmpty()));
             }
         } else if (view == View.ASSIGN_PLAYLISTS) {
-            List<String> assigned = assignedOf(target);
+            List<String> assigned = assignedOfTarget();
             for (Playlist playlist : CustomMusicClient.library().playlists()) {
                 items.add(new SituationalListWidget.Item(SituationalListWidget.Kind.PLAYLIST, playlist.id(),
                         playlist.name(), playlist.size() + " 首", assigned.contains(playlist.id())));
             }
         } else {
-            List<String> assigned = assignedOf(target);
+            List<String> assigned = assignedOfTarget();
             for (CustomMusicConfig.TrackEntry entry : CustomMusicClient.library().enabledTracks()) {
                 items.add(new SituationalListWidget.Item(SituationalListWidget.Kind.TRACK, entry.file,
                         MusicLibrary.displayName(entry.file), "", assigned.contains(entry.file)));
@@ -161,6 +172,31 @@ public final class SituationalScreen extends Screen {
         return assigned == null ? List.of() : assigned;
     }
 
+    /** 当前 target 展开成的情境列表：target 可能是单个情境，也可能是一整个分组。 */
+    private List<String> targetContexts() {
+        if (target == null) {
+            return List.of();
+        }
+        MusicEvents.Preset preset = MusicEvents.findPreset(target);
+        if (preset != null) {
+            return MusicEvents.expand(preset, discovered);
+        }
+        return List.of(target);
+    }
+
+    /** 当前 target（含分组）里已分配的选择器，去重。 */
+    private List<String> assignedOfTarget() {
+        List<String> result = new ArrayList<>();
+        for (String context : targetContexts()) {
+            for (String selector : assignedOf(context)) {
+                if (!result.contains(selector)) {
+                    result.add(selector);
+                }
+            }
+        }
+        return result;
+    }
+
     private String summary(List<String> assigned) {
         if (assigned == null || assigned.isEmpty()) {
             return "";
@@ -180,7 +216,8 @@ public final class SituationalScreen extends Screen {
     // ------------------------------------------------------------ 交互
 
     public void onRowClick(SituationalListWidget.Item item) {
-        if (item.kind() == SituationalListWidget.Kind.CONTEXT) {
+        if (item.kind() == SituationalListWidget.Kind.CONTEXT
+                || item.kind() == SituationalListWidget.Kind.PRESET) {
             target = item.id();
             view = View.ASSIGN_PLAYLISTS;
             rebuildWidgets();
@@ -198,20 +235,43 @@ public final class SituationalScreen extends Screen {
             refresh();
             return;
         }
+        if (item.kind() == SituationalListWidget.Kind.PRESET) {
+            target = item.id();
+            clearTarget();
+            return;
+        }
         toggle(item.id());
     }
 
     private void toggle(String selector) {
-        if (target == null) {
+        List<String> contexts = targetContexts();
+        if (contexts.isEmpty()) {
             return;
         }
         CustomMusicConfig config = CustomMusicClient.config();
-        List<String> current = config.assignments.computeIfAbsent(target, key -> new ArrayList<>());
-        if (!current.remove(selector)) {
-            current.add(selector);
+        // 整组都分配过就取消，否则整组一起加上
+        boolean allAssigned = contexts.stream().allMatch(id -> assignedOf(id).contains(selector));
+        for (String context : contexts) {
+            List<String> current = config.assignments.computeIfAbsent(context, key -> new ArrayList<>());
+            if (allAssigned) {
+                current.remove(selector);
+            } else if (!current.contains(selector)) {
+                current.add(selector);
+            }
+            if (current.isEmpty()) {
+                config.assignments.remove(context);
+            }
         }
-        if (current.isEmpty()) {
-            config.assignments.remove(target);
+        config.save();
+        SituationalEngine.reset();
+        refresh();
+    }
+
+    /** 清空当前 target（单情境或整组）的所有分配。 */
+    private void clearTarget() {
+        CustomMusicConfig config = CustomMusicClient.config();
+        for (String context : targetContexts()) {
+            config.assignments.remove(context);
         }
         config.save();
         SituationalEngine.reset();
@@ -239,9 +299,15 @@ public final class SituationalScreen extends Screen {
     }
 
     private Component hintText() {
-        return target == null
-                ? Component.translatable("custommusic.situational.pickContext")
-                : Component.translatable("custommusic.situational.assigning", MusicEvents.displayName(target));
+        if (target == null) {
+            return Component.translatable("custommusic.situational.pickContext");
+        }
+        MusicEvents.Preset preset = MusicEvents.findPreset(target);
+        if (preset != null) {
+            return Component.translatable("custommusic.situational.assigningGroup",
+                    Component.translatable(preset.nameKey()).getString(), targetContexts().size());
+        }
+        return Component.translatable("custommusic.situational.assigning", MusicEvents.displayName(target));
     }
 
     @Override

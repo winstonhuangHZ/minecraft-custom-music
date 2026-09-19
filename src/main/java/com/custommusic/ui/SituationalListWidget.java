@@ -12,7 +12,7 @@ import java.util.List;
 public final class SituationalListWidget extends ObjectSelectionList<SituationalListWidget.Row> {
 
     public enum Kind {
-        CONTEXT, PLAYLIST, TRACK
+        PRESET, CONTEXT, PLAYLIST, TRACK
     }
 
     /** 一行数据。marked 表示「已分配/有配置」。 */
@@ -59,8 +59,10 @@ public final class SituationalListWidget extends ObjectSelectionList<Situational
 
             graphics.fill(x, y, x + width, y + height, hovered ? 0x50FFFFFF : 0x28000000);
 
-            int labelColor = item.kind() == Kind.CONTEXT && !item.marked() ? 0xFFD0D0D0 : 0xFFFFFFFF;
-            graphics.text(Minecraft.getInstance().font, item.label(),
+            boolean isGroupRow = item.kind() == Kind.PRESET || item.kind() == Kind.CONTEXT;
+            int labelColor = isGroupRow && !item.marked() ? 0xFFD0D0D0 : 0xFFFFFFFF;
+            String label = item.kind() == Kind.PRESET ? "【组】" + item.label() : item.label();
+            graphics.text(Minecraft.getInstance().font, label,
                     x + 6, y + (height - 8) / 2, labelColor);
             if (!item.detail().isEmpty()) {
                 graphics.text(Minecraft.getInstance().font, item.detail(),
@@ -68,7 +70,8 @@ public final class SituationalListWidget extends ObjectSelectionList<Situational
                         y + (height - 8) / 2, 0xFFA0A0A0);
             }
 
-            String glyph = item.marked() ? (item.kind() == Kind.CONTEXT ? "✕" : "✓") : "＋";
+            boolean canPick = item.kind() == Kind.PLAYLIST || item.kind() == Kind.TRACK;
+            String glyph = item.marked() ? (canPick ? "✓" : "✕") : "＋";
             int[] box = box(x, y, width, height);
             boolean hover = inside(box, mouseX, mouseY);
             graphics.fill(box[0], box[1], box[2], box[3], hover ? 0xC0FFFFFF : 0x80000000);
