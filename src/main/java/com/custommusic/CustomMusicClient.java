@@ -61,6 +61,12 @@ public final class CustomMusicClient implements ClientModInitializer {
         library.scan();
 
         LOG.info("CustomMusic 已加载，音乐文件夹: {}", library.folder());
+        // 装了 ModMenu 就能从模组列表进设置，没装也能按快捷键进
+        if (FabricLoader.getInstance().isModLoaded("modmenu")) {
+            LOG.info("检测到 ModMenu：模组列表里可以直接打开本模组的设置界面");
+        } else {
+            LOG.info("没有装 ModMenu：按 M 打开界面；装上 ModMenu 后也能从模组列表进入（可选）");
+        }
     }
 
     /** 键位由 OptionsKeyMixin 在 Options.load() 时插进去（不依赖 Fabric API）。 */

@@ -37,6 +37,8 @@ dependencies {
 
     // ModMenu 只用于编译期（配置界面入口），运行期可选
     compileOnly("maven.modrinth:modmenu:$modmenuVersion")
+    // 开发环境里真的装上它，好把入口跑通验证
+    localRuntime("maven.modrinth:modmenu:$modmenuVersion")
 }
 
 java {

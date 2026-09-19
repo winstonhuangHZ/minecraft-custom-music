@@ -28,7 +28,7 @@
 | Fabric Loader | 0.16.0+（实测 0.19.3） |
 | Java | 25（Minecraft 26.2 本身就要求 25） |
 | ffmpeg | 任意版本，建议完整版（带 libvorbis） |
-| ModMenu | 可选 |
+| ModMenu | 可选，**推荐**（装了才能在模组列表里直接点设置） |
 
 **不需要 Fabric API。** 生命周期事件、快捷键注册、HUD 绘制这三处原本要用 Fabric API，
 现在都用 Mixin 直接接原版（`Minecraft.tick`、`Options.load`、`Hud.extractRenderState`），
@@ -37,6 +37,21 @@
 唯一不能放开的是 **Minecraft 版本**：Mixin 是按方法签名注入的（`MusicManager.startPlaying`、
 `PackRepository.rebuildSelected`、`Hud.extractRenderState` 等），换版本必须重新适配。
 写成 `~26.2` 是为了版本对不上时干净地拒绝加载，而不是进游戏后崩在某个注入点上。
+
+### ModMenu 支持（可选，推荐）
+
+本模组**不依赖** ModMenu，装不装都能用：
+
+| 情况 | 怎么打开界面 |
+|---|---|
+| 装了 ModMenu | 「模组」列表里本模组有「设置」按钮，点进去就是主界面 |
+| 没装 ModMenu | 游戏里按 `M`（可在「选项 → 控制 → 按键绑定 → 自定义音乐」里改） |
+
+装 ModMenu 的好处是能在模组列表里看到本模组和它的说明，入口更直观。
+注意 ModMenu 自己依赖 Fabric API，但**本模组不需要**——也就是说你完全可以只装
+Minecraft + Fabric Loader + 本模组，用 `M` 键进界面。
+
+模组启动时会在日志里提示当前属于哪种情况，方便排查。
 
 ## 安装
 
