@@ -122,6 +122,14 @@ public final class MusicEvents {
                 }
             }
         }
+        StringBuilder summary = new StringBuilder();
+        int total = 0;
+        for (Map.Entry<String, SortedSet<String>> entry : found.entrySet()) {
+            total += entry.getValue().size();
+            summary.append(summary.length() == 0 ? "" : ", ")
+                    .append(entry.getKey()).append('=').append(entry.getValue().size());
+        }
+        CustomMusicClient.LOG.info("枚举到 {} 个配乐事件（{}）", total, summary);
         return found;
     }
 
