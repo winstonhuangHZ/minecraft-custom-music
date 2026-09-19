@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "package": "com.custommusic.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "PackRepositoryMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

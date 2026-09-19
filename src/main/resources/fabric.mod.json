@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "custommusic",
+  "version": "${version}",
+  "name": "Custom Music",
+  "description": "把 mp3 丢进文件夹，模组自动转码成 OGG 并接管游戏背景音乐。",
+  "authors": [
+    "you"
+  ],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.custommusic.CustomMusicClient"
+    ],
+    "modmenu": [
+      "com.custommusic.modmenu.ModMenuIntegration"
+    ]
+  },
+  "mixins": [
+    "custommusic.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=25",
+    "fabric-api-base": "*",
+    "fabric-lifecycle-events-v1": "*"
+  },
+  "suggests": {
+    "modmenu": "*"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "custommusic.title": "Custom Music",
+  "custommusic.button.sync": "Rescan & Convert",
+  "custommusic.button.reload": "Reload Pack",
+  "custommusic.button.folder": "Open Folder",
+  "custommusic.button.enableAll": "Enable All",
+  "custommusic.button.disableAll": "Disable All",
+  "custommusic.status": "%s / %s tracks enabled · pack %s",
+  "custommusic.state.active": "active",
+  "custommusic.state.inactive": "inactive",
+  "custommusic.hint.ffmpeg": "ffmpeg not found — mp3 files cannot be converted (set ffmpegPath in config)",
+  "custommusic.hint.empty": "No tracks yet — drop audio files into the music folder, then hit Rescan & Convert",
+  "custommusic.key.open": "Open Custom Music",
+  "key.categories.custommusic.main": "Custom Music",
+  "custommusic.button.preview": "Preview"
+}
