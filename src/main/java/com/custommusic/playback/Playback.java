@@ -52,7 +52,32 @@ public final class Playback {
             Identifier context = music == null ? null : music.sound().value().location();
             return SituationalEngine.next(context);
         }
+        // 播放器模式：排除列表里的情境不接管（默认是末影龙和终末之诗），
+        // 否则「资源包不覆盖它、运行时却照样替换」就自相矛盾了
+        if (music != null && isExcluded(music.sound().value().location())) {
+            return null;
+        }
         return PlaylistEngine.nextPick();
+    }
+
+    /** 这个情境是不是在 overrideExclude 里。写 "music.dragon" 或 "minecraft:music.dragon" 都认。 */
+    private static boolean isExcluded(Identifier context) {
+        CustomMusicConfig config = CustomMusicClient.config();
+        if (config.overrideExclude == null || config.overrideExclude.isEmpty()) {
+            return false;
+        }
+        String full = context.toString();
+        String path = context.getPath();
+        for (String raw : config.overrideExclude) {
+            if (raw == null || raw.isBlank()) {
+                continue;
+            }
+            String value = raw.trim();
+            if (value.equals(full) || value.equals(path)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** 有没有在接管（每 tick 都会被调用，别做重活）。 */
