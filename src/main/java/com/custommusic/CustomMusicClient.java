@@ -1,6 +1,7 @@
 package com.custommusic;
 
 import com.custommusic.config.CustomMusicConfig;
+import com.custommusic.hud.MusicHud;
 import com.custommusic.music.MusicLibrary;
 import com.custommusic.pack.PackManager;
 import com.custommusic.sync.MusicSync;
@@ -65,6 +66,8 @@ public final class CustomMusicClient implements ClientModInitializer {
                 GLFW.GLFW_KEY_M,
                 KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "main"))));
 
+        MusicHud.register();
+
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
             while (openScreenKey.consumeClick()) {
                 minecraft.setScreenAndShow(new MusicScreen(minecraft.gui.screen()));
@@ -72,7 +75,8 @@ public final class CustomMusicClient implements ClientModInitializer {
         });
 
         ClientLifecycleEvents.CLIENT_STARTED.register(minecraft -> {
-            PackManager.enableAndReload();
+            // 已经启用过就别再重载一次：重载窗口内所有播放请求都会失败
+            PackManager.ensureEnabled();
             if (config.autoSyncOnStart) {
                 MusicSync.start();
             }

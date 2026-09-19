@@ -36,6 +36,32 @@ public final class CustomMusicConfig {
     /** 上次成功生成资源包的时间戳。 */
     public long lastGeneratedAt = 0L;
 
+    // ---------------- 歌单 / 队列 ----------------
+
+    /** 歌单队列：存歌单 id（文件夹相对路径，顶层散文件是空串）。 */
+    public List<String> queue = new ArrayList<>();
+
+    /** 当前播到队列里的第几个歌单。 */
+    public int queueIndex = 0;
+
+    /** 歌单内是否随机播放。 */
+    public boolean shuffleTracks = false;
+
+    /** 一张歌单最多播几首，0 = 播完为止。 */
+    public int tracksPerPlaylist = 0;
+
+    /** 一张歌单最多播几分钟，0 = 不限制。 */
+    public int minutesPerPlaylist = 0;
+
+    /** 队列播完后是否循环。 */
+    public boolean loopQueue = false;
+
+    /** 两首歌之间的间隔秒数。 */
+    public int trackGapSeconds = 2;
+
+    /** 是否在右上角显示「正在播放」小标签。 */
+    public boolean showHud = true;
+
     public static final class TrackEntry {
         /** 相对音乐文件夹的路径，用 / 分隔。 */
         public String file;
@@ -89,7 +115,13 @@ public final class CustomMusicConfig {
         if (tracks == null) {
             tracks = new ArrayList<>();
         }
+        if (queue == null) {
+            queue = new ArrayList<>();
+        }
         vorbisQuality = Math.max(0, Math.min(10, vorbisQuality));
+        tracksPerPlaylist = Math.max(0, tracksPerPlaylist);
+        minutesPerPlaylist = Math.max(0, minutesPerPlaylist);
+        trackGapSeconds = Math.max(0, Math.min(60, trackGapSeconds));
     }
 
     public void save() {

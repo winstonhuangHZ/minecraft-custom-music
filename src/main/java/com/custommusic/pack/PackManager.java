@@ -49,19 +49,44 @@ public final class PackManager {
 
     /** 启用或更新资源包并重载资源，必须在客户端主线程调用。 */
     public static void enableAndReload() {
+        ensureSelected();
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft != null) {
+            minecraft.reloadResourcePacks();
+        }
+    }
+
+    /**
+     * 启动时用：没选中就勾上（并且重载），本来就选中就什么都不做。
+     * 上一个会话已经启用过的话，游戏启动时那次资源加载已经带上它了，
+     * 再重载一次只会让声音引擎白掉一次线，重载窗口内所有播放请求都会失败。
+     */
+    public static void ensureEnabled() {
+        if (!ensureSelected()) {
+            return;
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft != null) {
+            minecraft.reloadResourcePacks();
+        }
+    }
+
+    /** 勾选资源包并持久化；返回 true 表示「这次真的改动了」。 */
+    private static boolean ensureSelected() {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft == null) {
-            return;
+            return false;
         }
         PackRepository repository = minecraft.getResourcePackRepository();
 
         repository.reload();
         String id = findPackId(repository);
         if (id == null) {
-            CustomMusicClient.LOG.warn("资源包仓库里没有 {},跳过启用", PackPaths.FOLDER_NAME);
-            return;
+            CustomMusicClient.LOG.warn("资源包仓库里没有 {}，还没生成过资源包", PackPaths.FOLDER_NAME);
+            return false;
         }
 
+        boolean changed = !repository.getSelectedIds().contains(id);
         repository.addPack(id);
 
         Pack pack = repository.getPack(id);
@@ -71,6 +96,6 @@ public final class PackManager {
 
         minecraft.options.updateResourcePacks(repository);
         minecraft.options.save();
-        minecraft.reloadResourcePacks();
+        return changed;
     }
 }

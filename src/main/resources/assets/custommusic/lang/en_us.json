@@ -12,5 +12,20 @@
   "custommusic.hint.empty": "No tracks yet — drop audio files into the music folder, then hit Rescan & Convert",
   "custommusic.key.open": "Open Custom Music",
   "key.categories.custommusic.main": "Custom Music",
-  "custommusic.button.preview": "Preview"
+  "custommusic.button.preview": "Preview",
+  "custommusic.button.playlists": "Playlists",
+  "custommusic.playlist.title": "Playlists",
+  "custommusic.playlist.play": "Play Selected",
+  "custommusic.playlist.enqueue": "Add to Queue",
+  "custommusic.playlist.skip": "Skip Album",
+  "custommusic.playlist.clear": "Clear Queue",
+  "custommusic.playlist.back": "Back",
+  "custommusic.playlist.shuffle": "Order: Shuffle",
+  "custommusic.playlist.sequence": "Order: In Order",
+  "custommusic.playlist.idle": "No playlist playing",
+  "custommusic.playlist.nowPlaying": "Now playing: %s (track %s)",
+  "custommusic.playlist.queueEmpty": "Queue is empty — select an album and hit Add to Queue",
+  "custommusic.playlist.empty": "No playlists yet: put your music into subfolders per album",
+  "custommusic.playlist.hudOn": "HUD: On",
+  "custommusic.playlist.hudOff": "HUD: Off"
 }

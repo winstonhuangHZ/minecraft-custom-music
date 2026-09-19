@@ -42,6 +42,7 @@ dependencies {
         "fabric-lifecycle-events-v1",
         "fabric-key-mapping-api-v1",
         "fabric-resource-loader-v1",
+        "fabric-rendering-v1",
     ).forEach { implementation(fabricApi.module(it, fabricApiVersion)) }
 
     // ModMenu 只用于编译期（配置界面入口），运行期可选

@@ -3,7 +3,8 @@
   "package": "com.custommusic.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
-    "PackRepositoryMixin"
+    "PackRepositoryMixin",
+    "MusicManagerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

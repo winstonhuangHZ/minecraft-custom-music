@@ -9,9 +9,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -124,6 +127,45 @@ public final class MusicLibrary {
         return tracks.stream().filter(t -> t.enabled).collect(Collectors.toList());
     }
 
+    /**
+     * 按文件夹把启用的曲子分组成功歌单。
+     * 只有启用的曲子会被转码、才会在资源包里生成事件，所以歌单同样只看启用的。
+     */
+    public List<Playlist> playlists() {
+        Map<String, List<CustomMusicConfig.TrackEntry>> grouped = new LinkedHashMap<>();
+        for (CustomMusicConfig.TrackEntry entry : enabledTracks()) {
+            grouped.computeIfAbsent(folderOf(entry.file), key -> new ArrayList<>()).add(entry);
+        }
+
+        List<Playlist> result = new ArrayList<>();
+        grouped.forEach((folder, entries) ->
+                result.add(new Playlist(folder, nameOf(folder), List.copyOf(entries))));
+        result.sort(Comparator.comparing(Playlist::name, String.CASE_INSENSITIVE_ORDER));
+        return result;
+    }
+
+    public static Playlist findPlaylist(List<Playlist> playlists, String id) {
+        for (Playlist playlist : playlists) {
+            if (playlist.id().equals(id)) {
+                return playlist;
+            }
+        }
+        return null;
+    }
+
+    private static String folderOf(String relativeFile) {
+        int slash = relativeFile.lastIndexOf('/');
+        return slash < 0 ? Playlist.ROOT_ID : relativeFile.substring(0, slash);
+    }
+
+    private static String nameOf(String folder) {
+        if (folder.isEmpty()) {
+            return "未分组";
+        }
+        int slash = folder.lastIndexOf('/');
+        return slash < 0 ? folder : folder.substring(slash + 1);
+    }
+
     public int enabledCount() {
         return (int) tracks.stream().filter(t -> t.enabled).count();
     }
@@ -181,6 +223,17 @@ public final class MusicLibrary {
             base = base.substring(0, 32);
         }
         return base.isEmpty() ? "track" : base;
+    }
+
+    /** 给歌单 id 生成安全的 slug。 */
+    public static String slugOf(String value) {
+        String base = value.toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "_")
+                .replaceAll("^_+|_+$", "");
+        if (base.length() > 40) {
+            base = base.substring(0, 40);
+        }
+        return base.isEmpty() ? "group" : base;
     }
 
     private static String shortHash(String value) {

@@ -1,0 +1,194 @@
+package com.custommusic.ui;
+
+import com.custommusic.CustomMusicClient;
+import com.custommusic.config.CustomMusicConfig;
+import com.custommusic.music.MusicLibrary;
+import com.custommusic.music.Playlist;
+import com.custommusic.music.PlaylistEngine;
+import com.custommusic.hud.NowPlaying;
+import com.custommusic.hud.NowPlayingCard;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+
+import java.util.List;
+
+/** 歌单界面：选一张专辑立刻播放，或者排进队列（放完一张自动换下一张）。 */
+public final class PlaylistScreen extends Screen {
+
+    private final Screen parent;
+    private PlaylistListWidget list;
+    private Button shuffleButton;
+    private Button hudButton;
+    private List<Playlist> playlists = List.of();
+    private int selected = -1;
+    private int refreshTimer;
+
+    public PlaylistScreen(Screen parent) {
+        super(Component.translatable("custommusic.playlist.title"));
+        this.parent = parent;
+    }
+
+    @Override
+    protected void init() {
+        int top = 58;
+        int listHeight = Math.max(40, this.height - top - 70);
+        this.list = new PlaylistListWidget(this, this.minecraft, this.width, listHeight, top, 24);
+        addRenderableWidget(this.list);
+        refresh();
+
+        int gap = 6;
+        int rowY = this.height - 48;
+        int row2Y = this.height - 24;
+        int third = Math.max(70, (this.width - 40 - gap * 2) / 3);
+        int quarter = Math.max(52, (this.width - 40 - gap * 3) / 4);
+
+        addRenderableWidget(Button.builder(Component.translatable("custommusic.playlist.play"),
+                        button -> playSelected())
+                .bounds(20, rowY, third, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("custommusic.playlist.enqueue"),
+                        button -> enqueueSelected())
+                .bounds(20 + third + gap, rowY, third, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("custommusic.playlist.skip"),
+                        button -> PlaylistEngine.skipPlaylist())
+                .bounds(20 + (third + gap) * 2, rowY, third, 20).build());
+
+        shuffleButton = addRenderableWidget(Button.builder(shuffleLabel(), button -> {
+            CustomMusicConfig config = CustomMusicClient.config();
+            config.shuffleTracks = !config.shuffleTracks;
+            config.save();
+            PlaylistEngine.reset();
+            button.setMessage(shuffleLabel());
+        }).bounds(20, row2Y, quarter, 20).build());
+
+        hudButton = addRenderableWidget(Button.builder(hudLabel(), button -> {
+            CustomMusicConfig config = CustomMusicClient.config();
+            config.showHud = !config.showHud;
+            config.save();
+            button.setMessage(hudLabel());
+        }).bounds(20 + quarter + gap, row2Y, quarter, 20).build());
+
+        addRenderableWidget(Button.builder(Component.translatable("custommusic.playlist.clear"),
+                        button -> PlaylistEngine.clear())
+                .bounds(20 + (quarter + gap) * 2, row2Y, quarter, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("custommusic.playlist.back"),
+                        button -> onClose())
+                .bounds(20 + (quarter + gap) * 3, row2Y, quarter, 20).build());
+
+    }
+
+    private Component shuffleLabel() {
+        return Component.translatable(CustomMusicClient.config().shuffleTracks
+                ? "custommusic.playlist.shuffle"
+                : "custommusic.playlist.sequence");
+    }
+
+    private Component hudLabel() {
+        return Component.translatable(CustomMusicClient.config().showHud
+                ? "custommusic.playlist.hudOn"
+                : "custommusic.playlist.hudOff");
+    }
+
+    /** 重新读一次歌单（扫描完成后或切回本界面时）。 */
+    public void refresh() {
+        this.playlists = CustomMusicClient.library().playlists();
+        if (selected >= playlists.size()) {
+            selected = playlists.isEmpty() ? -1 : playlists.size() - 1;
+        }
+        if (this.list != null) {
+            this.list.reload(playlists, selected);
+        }
+    }
+
+    public void select(int index) {
+        this.selected = index;
+        refresh();
+    }
+
+    public void playPlaylist(Playlist playlist) {
+        PlaylistEngine.playNow(playlist.id());
+    }
+
+    public void enqueuePlaylist(Playlist playlist) {
+        PlaylistEngine.enqueue(playlist.id());
+    }
+
+    private void playSelected() {
+        if (selected >= 0 && selected < playlists.size()) {
+            playPlaylist(playlists.get(selected));
+        }
+    }
+
+    private void enqueueSelected() {
+        if (selected >= 0 && selected < playlists.size()) {
+            enqueuePlaylist(playlists.get(selected));
+        }
+    }
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+
+        graphics.centeredText(this.font, this.title, this.width / 2, 12, 0xFFFFFFFF);
+        graphics.centeredText(this.font, nowPlayingText(), this.width / 2, 28, 0xFFA0A0A0);
+        graphics.centeredText(this.font, queueText(), this.width / 2, 40, 0xFF80C0FF);
+
+        if (playlists.isEmpty()) {
+            graphics.centeredText(this.font, Component.translatable("custommusic.playlist.empty"),
+                    this.width / 2, this.height / 2, 0xFFFFD080);
+        }
+
+        // 右上角也画一份「正在播放」，方便调界面时直接看到效果
+        if (NowPlaying.isPlaying()) {
+            NowPlayingCard.render(graphics, this.font,
+                    Math.max(0, graphics.guiWidth() - NowPlayingCard.WIDTH - 6), 6);
+        }
+    }
+
+    private Component nowPlayingText() {
+        String track = PlaylistEngine.currentTrack();
+        if (track == null) {
+            return Component.translatable("custommusic.playlist.idle");
+        }
+        return Component.translatable("custommusic.playlist.nowPlaying",
+                MusicLibrary.displayName(track), PlaylistEngine.playedInPlaylist());
+    }
+
+    private Component queueText() {
+        List<String> queue = CustomMusicClient.config().queue;
+        if (queue.isEmpty()) {
+            return Component.translatable("custommusic.playlist.queueEmpty");
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < queue.size() && i < 6; i++) {
+            Playlist playlist = MusicLibrary.findPlaylist(playlists, queue.get(i));
+            if (sb.length() > 0) {
+                sb.append("  →  ");
+            }
+            if (i == CustomMusicClient.config().queueIndex) {
+                sb.append("▶ ");
+            }
+            sb.append(playlist == null ? queue.get(i) : playlist.name());
+        }
+        if (queue.size() > 6) {
+            sb.append("  …");
+        }
+        return Component.literal(sb.toString());
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        // 扫描可能改了歌单，隔两秒刷一次列表
+        if (++refreshTimer >= 40) {
+            refreshTimer = 0;
+            refresh();
+        }
+    }
+
+    @Override
+    public void onClose() {
+        this.minecraft.setScreenAndShow(this.parent);
+    }
+}

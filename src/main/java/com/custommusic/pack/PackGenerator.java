@@ -17,9 +17,9 @@ import java.util.Locale;
 /** 生成资源包：转码 + 写 sounds.json / pack.mcmeta。 */
 public final class PackGenerator {
 
-    /** 试听事件前缀，界面里点「试听」用的就是它。 */
+    /** 每首歌一个事件的前缀，试听和歌单播放都走它。 */
     public static final String PREVIEW_NAMESPACE = "custommusic";
-    public static final String PREVIEW_PREFIX = "preview.";
+    public static final String TRACK_PREFIX = "track.";
 
     public interface Progress {
         void onProgress(int done, int total, String current);
@@ -41,6 +41,7 @@ public final class PackGenerator {
         Files.createDirectories(musicDir);
 
         List<String> ids = new ArrayList<>();
+        java.util.Map<String, String> names = new java.util.LinkedHashMap<>();
         List<String> errors = new ArrayList<>();
         int converted = 0;
         int cached = 0;
@@ -68,6 +69,7 @@ public final class PackGenerator {
 
             if (AudioConverter.isUpToDate(source, target)) {
                 ids.add(id);
+                names.put(id, MusicLibrary.displayName(entry.file));
                 cached++;
                 continue;
             }
@@ -83,6 +85,7 @@ public final class PackGenerator {
                     continue;
                 }
                 ids.add(id);
+                names.put(id, MusicLibrary.displayName(entry.file));
                 converted++;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -97,6 +100,7 @@ public final class PackGenerator {
 
         pruneOrphans(musicDir, ids);
         writeSoundsJson(config, ids);
+        writeLangFiles(names);
         writePackMeta(enabled.size());
 
         if (progress != null) {
@@ -149,7 +153,7 @@ public final class PackGenerator {
         Files.createDirectories(file.getParent());
         Files.writeString(file, "{\n" + String.join(",\n", blocks) + "\n}\n", StandardCharsets.UTF_8);
 
-        writePreviewSoundsJson(ids);
+        writeTrackSoundsJson(ids);
     }
 
     /**
@@ -158,10 +162,10 @@ public final class PackGenerator {
      * assets/custommusic/sounds.json 里的 preview.xxx 就是 custommusic:preview.xxx。
      * 曲名（name）用完整的 minecraft:music/... 指回另一棵树里的 ogg。
      */
-    private static void writePreviewSoundsJson(List<String> ids) throws IOException {
+    private static void writeTrackSoundsJson(List<String> ids) throws IOException {
         List<String> blocks = new ArrayList<>();
         for (String id : ids) {
-            blocks.add("  \"" + PREVIEW_PREFIX + id + "\": {\n"
+            blocks.add("  \"" + TRACK_PREFIX + id + "\": {\n"
                     + "    \"sounds\": [\n"
                     + "      { \"name\": \"minecraft:music/" + id + "\", \"stream\": true }\n"
                     + "    ]\n  }");
@@ -169,6 +173,31 @@ public final class PackGenerator {
         Path file = PackPaths.previewSoundsJson();
         Files.createDirectories(file.getParent());
         Files.writeString(file, "{\n" + String.join(",\n", blocks) + "\n}\n", StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 生成曲名翻译，让原版的「正在播放」提示显示歌名而不是内部 id。
+     * 原版是从音频文件路径推翻译键的，所以几个可能的形式都写上，多余的无害。
+     */
+    private static void writeLangFiles(java.util.Map<String, String> names) throws IOException {
+        java.util.Map<String, String> lang = new java.util.LinkedHashMap<>();
+        names.forEach((id, name) -> {
+            lang.put("music." + id, name);
+            lang.put("sound.custommusic.track." + id, name);
+            lang.put("custommusic.track." + id, name);
+        });
+
+        com.google.gson.Gson gson = new com.google.gson.GsonBuilder()
+                .setPrettyPrinting()
+                .disableHtmlEscaping()
+                .create();
+        String json = gson.toJson(lang);
+
+        for (String locale : List.of("en_us", "zh_cn")) {
+            Path file = PackPaths.langFile(locale);
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, json, StandardCharsets.UTF_8);
+        }
     }
 
     private static void writePackMeta(int trackCount) throws IOException {

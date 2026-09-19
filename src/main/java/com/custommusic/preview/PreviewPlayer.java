@@ -1,6 +1,7 @@
 package com.custommusic.preview;
 
 import com.custommusic.CustomMusicClient;
+import com.custommusic.hud.NowPlaying;
 import com.custommusic.music.MusicLibrary;
 import com.custommusic.pack.PackGenerator;
 import net.minecraft.client.Minecraft;
@@ -38,7 +39,7 @@ public final class PreviewPlayer {
         }
 
         Identifier eventId = Identifier.fromNamespaceAndPath(
-                PackGenerator.PREVIEW_NAMESPACE, PackGenerator.PREVIEW_PREFIX + id);
+                PackGenerator.PREVIEW_NAMESPACE, PackGenerator.TRACK_PREFIX + id);
         SoundEvent event = SoundEvent.createVariableRangeEvent(eventId);
         SoundInstance instance = SimpleSoundInstance.forMusic(event);
         SoundEngine.PlayResult result = minecraft.getSoundManager().play(instance);
@@ -49,6 +50,7 @@ public final class PreviewPlayer {
 
         current = instance;
         currentId = id;
+        NowPlaying.onTrackStarted(trackFile);
     }
 
     public static void stop() {
@@ -58,5 +60,6 @@ public final class PreviewPlayer {
         }
         current = null;
         currentId = null;
+        NowPlaying.onStopped();
     }
 }

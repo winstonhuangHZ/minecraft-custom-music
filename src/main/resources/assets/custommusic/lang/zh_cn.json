@@ -12,5 +12,20 @@
   "custommusic.hint.empty": "还没有曲子，把音频文件放进音乐文件夹后点「重新扫描并转码」",
   "custommusic.key.open": "打开自定义音乐界面",
   "key.categories.custommusic.main": "自定义音乐",
-  "custommusic.button.preview": "试听"
+  "custommusic.button.preview": "试听",
+  "custommusic.button.playlists": "歌单播放",
+  "custommusic.playlist.title": "歌单播放",
+  "custommusic.playlist.play": "立即播放选中的",
+  "custommusic.playlist.enqueue": "加入队列",
+  "custommusic.playlist.skip": "跳过本张",
+  "custommusic.playlist.clear": "清空队列",
+  "custommusic.playlist.back": "返回",
+  "custommusic.playlist.shuffle": "播放顺序：随机",
+  "custommusic.playlist.sequence": "播放顺序：顺序",
+  "custommusic.playlist.idle": "当前没有在放歌单",
+  "custommusic.playlist.nowPlaying": "正在播放：%s（本张第 %s 首）",
+  "custommusic.playlist.queueEmpty": "队列为空 —— 选一张歌单点「加入队列」",
+  "custommusic.playlist.empty": "还没有歌单：把音乐按专辑放进不同的子文件夹",
+  "custommusic.playlist.hudOn": "右上角标签：开",
+  "custommusic.playlist.hudOff": "右上角标签：关"
 }

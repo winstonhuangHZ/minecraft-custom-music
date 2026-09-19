@@ -25,7 +25,9 @@
     "minecraft": "~${minecraft_version}",
     "java": ">=25",
     "fabric-api-base": "*",
-    "fabric-lifecycle-events-v1": "*"
+    "fabric-lifecycle-events-v1": "*",
+    "fabric-key-mapping-api-v1": "*",
+    "fabric-rendering-v1": "*"
   },
   "suggests": {
     "modmenu": "*"

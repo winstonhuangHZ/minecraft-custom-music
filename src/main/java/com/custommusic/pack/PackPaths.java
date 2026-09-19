@@ -33,6 +33,11 @@ public final class PackPaths {
         return packDir().resolve("assets/custommusic/sounds.json");
     }
 
+    /** 曲名翻译写在 minecraft 命名空间下（资源包加语言键的惯例位置）。 */
+    public static Path langFile(String locale) {
+        return packDir().resolve("assets/minecraft/lang/" + locale + ".json");
+    }
+
     public static Path musicDir() {
         return packDir().resolve("assets/minecraft/sounds/music");
     }

@@ -37,15 +37,17 @@ public final class MusicScreen extends Screen {
         int gap = 6;
         int topY = this.height - 52;
         int bottomY = this.height - 28;
-        int half = Math.max(70, (this.width - 40 - gap) / 2);
         int third = Math.max(60, (this.width - 40 - gap * 2) / 3);
 
         addRenderableWidget(Button.builder(Component.translatable("custommusic.button.sync"),
                         button -> MusicSync.start())
-                .bounds(20, topY, half, 20).build());
+                .bounds(20, topY, third, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("custommusic.button.reload"),
                         button -> PackManager.enableAndReload())
-                .bounds(20 + half + gap, topY, half, 20).build());
+                .bounds(20 + third + gap, topY, third, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("custommusic.button.playlists"),
+                        button -> this.minecraft.setScreenAndShow(new PlaylistScreen(this)))
+                .bounds(20 + (third + gap) * 2, topY, third, 20).build());
 
         addRenderableWidget(Button.builder(Component.translatable("custommusic.button.enableAll"), button -> {
             CustomMusicClient.library().setAllEnabled(true);
