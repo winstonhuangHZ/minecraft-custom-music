@@ -24,11 +24,19 @@
 
 | 依赖 | 版本 |
 |---|---|
-| Minecraft | 26.2 |
-| Fabric Loader | 0.19.3+ |
-| Fabric API | 0.154.2+26.2 |
+| Minecraft | 26.2（这一条必须对上） |
+| Fabric Loader | 0.16.0+（实测 0.19.3） |
+| Java | 25（Minecraft 26.2 本身就要求 25） |
 | ffmpeg | 任意版本，建议完整版（带 libvorbis） |
 | ModMenu | 可选 |
+
+**不需要 Fabric API。** 生命周期事件、快捷键注册、HUD 绘制这三处原本要用 Fabric API，
+现在都用 Mixin 直接接原版（`Minecraft.tick`、`Options.load`、`Hud.extractRenderState`），
+所以依赖只剩「Minecraft + Fabric Loader」，少一个装错/漏装就启动不了的环节。
+
+唯一不能放开的是 **Minecraft 版本**：Mixin 是按方法签名注入的（`MusicManager.startPlaying`、
+`PackRepository.rebuildSelected`、`Hud.extractRenderState` 等），换版本必须重新适配。
+写成 `~26.2` 是为了版本对不上时干净地拒绝加载，而不是进游戏后崩在某个注入点上。
 
 ## 安装
 

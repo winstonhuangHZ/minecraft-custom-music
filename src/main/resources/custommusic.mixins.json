@@ -4,7 +4,10 @@
   "compatibilityLevel": "JAVA_25",
   "client": [
     "PackRepositoryMixin",
-    "MusicManagerMixin"
+    "MusicManagerMixin",
+    "MinecraftTickMixin",
+    "OptionsKeyMixin",
+    "HudMixin"
   ],
   "injectors": {
     "defaultRequire": 1

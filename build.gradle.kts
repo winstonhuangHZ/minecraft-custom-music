@@ -4,7 +4,6 @@ plugins {
 
 val minecraftVersion = project.property("minecraft_version") as String
 val loaderVersion = project.property("loader_version") as String
-val fabricApiVersion = project.property("fabric_api_version") as String
 val modmenuVersion = project.property("modmenu_version") as String
 val jdkVersion = 25
 
@@ -34,16 +33,7 @@ dependencies {
     minecraft("com.mojang:minecraft:$minecraftVersion")
     implementation("net.fabricmc:fabric-loader:$loaderVersion")
 
-    // 只取需要的 Fabric API 模块。
-    // 注意：Loom 1.17 起不再有 modImplementation/modCompileOnly，
-    // implementation/compileOnly 本身就会对 mod 依赖做重映射。
-    listOf(
-        "fabric-api-base",
-        "fabric-lifecycle-events-v1",
-        "fabric-key-mapping-api-v1",
-        "fabric-resource-loader-v1",
-        "fabric-rendering-v1",
-    ).forEach { implementation(fabricApi.module(it, fabricApiVersion)) }
+    // 不需要 Fabric API：生命周期/键位/HUD 都用 Mixin 自己接（见 mixin 包）
 
     // ModMenu 只用于编译期（配置界面入口），运行期可选
     compileOnly("maven.modrinth:modmenu:$modmenuVersion")
@@ -65,6 +55,7 @@ tasks.processResources {
         "version" to project.version.toString(),
         "minecraft_version" to minecraftVersion,
         "loader_version" to loaderVersion,
+        "loader_min_version" to project.property("loader_min_version").toString(),
     )
     inputs.properties(props)
     filesMatching("fabric.mod.json") {

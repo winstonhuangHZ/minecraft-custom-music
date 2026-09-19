@@ -7,11 +7,9 @@ import com.custommusic.pack.PackManager;
 import com.custommusic.sync.MusicSync;
 import com.custommusic.ui.MusicScreen;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
@@ -29,6 +27,7 @@ public final class CustomMusicClient implements ClientModInitializer {
     private static CustomMusicConfig config;
     private static MusicLibrary library;
     private static KeyMapping openScreenKey;
+    private static boolean started;
 
     public static Path gameDir() {
         return FabricLoader.getInstance().getGameDir();
@@ -61,20 +60,25 @@ public final class CustomMusicClient implements ClientModInitializer {
         // 先按上次的记录快速重建一遍资源包（不转码），这样启动时就能被资源包仓库发现
         library.scan();
 
-        openScreenKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+        LOG.info("CustomMusic 已加载，音乐文件夹: {}", library.folder());
+    }
+
+    /** 键位由 OptionsKeyMixin 在 Options.load() 时插进去（不依赖 Fabric API）。 */
+    public static KeyMapping createOpenKey() {
+        return new KeyMapping(
                 "key.custommusic.open",
                 GLFW.GLFW_KEY_M,
-                KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "main"))));
+                KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "main")));
+    }
 
-        MusicHud.register();
+    public static void setOpenKey(KeyMapping mapping) {
+        openScreenKey = mapping;
+    }
 
-        ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
-            while (openScreenKey.consumeClick()) {
-                minecraft.setScreenAndShow(new MusicScreen(minecraft.gui.screen()));
-            }
-        });
-
-        ClientLifecycleEvents.CLIENT_STARTED.register(minecraft -> {
+    /** MinecraftTickMixin 每 tick 调一次：第一 tick 做启动，之后处理快捷键。 */
+    public static void onClientTick(Minecraft minecraft) {
+        if (!started) {
+            started = true;
             // 已经启用过就别再重载一次：重载窗口内所有播放请求都会失败
             PackManager.ensureEnabled();
             if (config.autoSyncOnStart) {
@@ -84,8 +88,12 @@ public final class CustomMusicClient implements ClientModInitializer {
             if (System.getProperty("custommusic.debugScreen") != null) {
                 minecraft.setScreenAndShow(new MusicScreen(null));
             }
-        });
+        }
 
-        LOG.info("CustomMusic 已加载，音乐文件夹: {}", library.folder());
+        if (openScreenKey != null) {
+            while (openScreenKey.consumeClick()) {
+                minecraft.setScreenAndShow(new MusicScreen(minecraft.gui.screen()));
+            }
+        }
     }
 }

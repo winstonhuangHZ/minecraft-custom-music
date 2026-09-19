@@ -1,33 +1,26 @@
 package com.custommusic.hud;
 
 import com.custommusic.CustomMusicClient;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Hud;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.resources.Identifier;
 
-/** 右上角的「正在播放」小标签，可以在界面里关掉。 */
-public final class MusicHud implements HudElement {
+/**
+ * 右上角的「正在播放」小标签，可以在界面里关掉。
+ * 由 HudMixin 注入原版 HUD 渲染的末尾调用，不依赖 Fabric API。
+ */
+public final class MusicHud {
 
-    private static final Identifier ID =
-            Identifier.fromNamespaceAndPath(CustomMusicClient.MOD_ID, "now_playing");
     private static final int MARGIN = 6;
 
     private MusicHud() {
     }
 
-    public static void register() {
-        HudElementRegistry.addLast(ID, new MusicHud());
-    }
-
-    @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+    public static void render(GuiGraphicsExtractor graphics, Hud hud) {
         if (CustomMusicClient.config() == null || !CustomMusicClient.config().showHud) {
             return;
         }
-        if (!NowPlaying.isPlaying()) {
+        if (hud.isHidden() || !NowPlaying.isPlaying()) {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
