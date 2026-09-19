@@ -2,6 +2,7 @@ package com.custommusic.pack;
 
 import com.custommusic.CustomMusicClient;
 import com.custommusic.audio.AudioConverter;
+import com.custommusic.audio.Mp3Fallback;
 import com.custommusic.config.CustomMusicConfig;
 import com.custommusic.music.MusicLibrary;
 import net.minecraft.SharedConstants;
@@ -25,7 +26,7 @@ public final class PackGenerator {
         void onProgress(int done, int total, String current);
     }
 
-    public record Result(int converted, int cached, int failed, List<String> errors) {
+    public record Result(int converted, int cached, int failed, int fallback, List<String> errors) {
         public boolean ok() {
             return failed == 0;
         }
@@ -47,10 +48,12 @@ public final class PackGenerator {
         int converted = 0;
         int cached = 0;
         int failed = 0;
+        int fallback = 0;
         int total = enabled.size();
         int index = 0;
 
-        boolean ffmpegReady = AudioConverter.available(config.ffmpegPath);
+        String ffmpeg = AudioConverter.resolveFfmpeg(config.ffmpegPath);
+        boolean ffmpegReady = ffmpeg != null;
 
         for (CustomMusicConfig.TrackEntry entry : enabled) {
             index++;
@@ -68,7 +71,8 @@ public final class PackGenerator {
             String id = MusicLibrary.trackId(entry.file);
             Path target = musicDir.resolve(id + ".ogg");
 
-            if (AudioConverter.isUpToDate(source, target)) {
+            // 占位文件不算缓存：以后装了 ffmpeg 会重新转成真 ogg
+            if (AudioConverter.isUpToDate(source, target) && !Mp3Fallback.isPlaceholder(target)) {
                 ids.add(id);
                 names.put(id, MusicLibrary.displayName(entry.file));
                 cached++;
@@ -77,12 +81,16 @@ public final class PackGenerator {
 
             try {
                 if (ffmpegReady) {
-                    AudioConverter.convert(config.ffmpegPath, source, target, config.vorbisQuality);
+                    AudioConverter.convert(ffmpeg, source, target, config.vorbisQuality);
                 } else if (isOgg(source)) {
                     AudioConverter.copy(source, target);
+                } else if (isMp3(source)) {
+                    // 没有 ffmpeg：写个占位文件让声音校验通过，播放时由 Mp3Fallback 直接喂 PCM
+                    writePlaceholder(target);
+                    fallback++;
                 } else {
                     failed++;
-                    errors.add("没有可用的 ffmpeg，无法转换 " + entry.file);
+                    errors.add("没有 ffmpeg，且这个格式纯 Java 解不了（只兜底 mp3/ogg）: " + entry.file);
                     continue;
                 }
                 ids.add(id);
@@ -107,12 +115,23 @@ public final class PackGenerator {
         if (progress != null) {
             progress.onProgress(total, total, "");
         }
-        return new Result(converted, cached, failed, List.copyOf(errors));
+        return new Result(converted, cached, failed, fallback, List.copyOf(errors));
     }
 
     private static boolean isOgg(Path source) {
         String name = source.getFileName().toString().toLowerCase(Locale.ROOT);
         return name.endsWith(".ogg") || name.endsWith(".oga");
+    }
+
+    private static boolean isMp3(Path source) {
+        return source.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".mp3");
+    }
+
+    /** 写一个极小的占位 ogg：只为让原版的声音校验通过，真播放时会被 MP3 流替换。 */
+    private static void writePlaceholder(Path target) throws IOException {
+        Files.createDirectories(target.getParent());
+        Files.write(target, new byte[]{'O', 'g', 'g', 'S', 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
     }
 
     private static void pruneOrphans(Path musicDir, List<String> ids) throws IOException {

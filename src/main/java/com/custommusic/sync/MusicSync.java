@@ -116,7 +116,8 @@ public final class MusicSync {
             if (result.ok()) {
                 state = State.DONE;
                 message = "共 " + (result.converted() + result.cached()) + " 首"
-                        + (result.converted() > 0 ? "，新转码 " + result.converted() : "");
+                        + (result.converted() > 0 ? "，新转码 " + result.converted() : "")
+                        + (result.fallback() > 0 ? "，其中 " + result.fallback() + " 首走 MP3 直读" : "");
             } else {
                 state = State.ERROR;
                 message = result.failed() + " 首失败，详见日志";

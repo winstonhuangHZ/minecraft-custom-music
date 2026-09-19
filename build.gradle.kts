@@ -39,6 +39,9 @@ dependencies {
     compileOnly("maven.modrinth:modmenu:$modmenuVersion")
     // 开发环境里真的装上它，好把入口跑通验证
     localRuntime("maven.modrinth:modmenu:$modmenuVersion")
+
+    // 纯 Java 的 MP3 解码器（没有 ffmpeg 时的 fallback），会被打进模组 jar
+    implementation("javazoom:jlayer:1.0.1")
 }
 
 java {
@@ -62,5 +65,14 @@ tasks.processResources {
     inputs.properties(props)
     filesMatching("fabric.mod.json") {
         expand(props)
+    }
+}
+
+// 把 JLayer 的类直接打进模组 jar（它不是 mod，Fabric 的 jar-in-jar 不会加载它）
+tasks.jar {
+    from(configurations.runtimeClasspath.get()
+        .filter { it.name.startsWith("jlayer") }
+        .map { zipTree(it) }) {
+        exclude("META-INF/**")
     }
 }

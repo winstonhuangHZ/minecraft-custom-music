@@ -60,6 +60,12 @@ public final class CustomMusicClient implements ClientModInitializer {
         // 先按上次的记录快速重建一遍资源包（不转码），这样启动时就能被资源包仓库发现
         library.scan();
 
+        // 后台先把 ffmpeg 探测做掉，免得第一次打开界面时在渲染线程上卡一下
+        Thread probe = new Thread(() -> com.custommusic.audio.AudioConverter
+                .resolveFfmpeg(config.ffmpegPath), "CustomMusic-FFmpegProbe");
+        probe.setDaemon(true);
+        probe.start();
+
         LOG.info("CustomMusic 已加载，音乐文件夹: {}", library.folder());
         // 装了 ModMenu 就能从模组列表进设置，没装也能按快捷键进
         if (FabricLoader.getInstance().isModLoaded("modmenu")) {

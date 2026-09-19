@@ -27,7 +27,7 @@
 | Minecraft | 26.2（这一条必须对上） |
 | Fabric Loader | 0.16.0+（实测 0.19.3） |
 | Java | 25（Minecraft 26.2 本身就要求 25） |
-| ffmpeg | 任意版本，建议完整版（带 libvorbis） |
+| ffmpeg | **可选**，装了能支持全部格式；不装也能放 mp3 |
 | ModMenu | 可选，**推荐**（装了才能在模组列表里直接点设置） |
 
 **不需要 Fabric API。** 生命周期事件、快捷键注册、HUD 绘制这三处原本要用 Fabric API，
@@ -37,6 +37,23 @@
 唯一不能放开的是 **Minecraft 版本**：Mixin 是按方法签名注入的（`MusicManager.startPlaying`、
 `PackRepository.rebuildSelected`、`Hud.extractRenderState` 等），换版本必须重新适配。
 写成 `~26.2` 是为了版本对不上时干净地拒绝加载，而不是进游戏后崩在某个注入点上。
+
+### 关于 ffmpeg（现在是可选的）
+
+Minecraft 只能播 OGG Vorbis，而纯 Java 没有可用的 Vorbis **编码器**（JOrbis 只能解码）。
+所以有两条路，模组会自己选：
+
+| 情况 | 行为 |
+|---|---|
+| 系统里有 ffmpeg | 自动找到，mp3/flac/m4a/wav… 全部转成 OGG 播放（质量最好，进度条精确） |
+| 系统里没有 ffmpeg | **mp3 直接由纯 Java 解码器播放**，完全不经过 OGG，也不需要任何外部工具；其它格式暂不支持 |
+| 配置里把 `ffmpegPath` 写成 `none` | 明确禁用 ffmpeg，强制走直读 |
+
+ffmpeg 的查找顺序：配置里的路径 → `PATH` → 常见安装位置（macOS 的 Homebrew/MacPorts、
+Windows 的 winget/scoop/chocolatey/Program Files、Linux 的 /usr/bin、/snap/bin 等）。
+找不到就会在日志和界面里提示，并自动降级到直读模式。
+
+以后装了 ffmpeg 也不用做别的：占位文件会被识别为「需要重新转码」，下次扫描自动升级成真 OGG。
 
 ### ModMenu 支持（可选，推荐）
 
@@ -104,7 +121,7 @@ Minecraft + Fabric Loader + 本模组，用 `M` 键进界面。
 | `assignments` | 情境规则：情境事件 id → 选择器列表（歌单 id 或单个曲目文件），见下面的例子 |
 | `overrideAllMusic` | 播放器模式下是否覆盖全部配乐事件（默认开） |
 | `overrideExclude` | 播放器模式下不动的事件，默认 `music.dragon`、`music.credits` |
-| `ffmpegPath` | ffmpeg 路径，可以填绝对路径 |
+| `ffmpegPath` | ffmpeg 路径；默认会自动探测，填 `none` 表示禁用 ffmpeg 改用纯 Java 直读 |
 | `vorbisQuality` | 转码质量 0-10，默认 5 |
 | `overrideEvents` | 要覆盖的原版音乐事件，默认 game/creative/menu/under_water |
 | `autoSyncOnStart` | 启动时自动扫描并转码 |

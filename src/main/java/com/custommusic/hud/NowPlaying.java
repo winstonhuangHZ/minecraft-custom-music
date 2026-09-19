@@ -207,6 +207,11 @@ public final class NowPlaying {
     /** 用 JOrbis 读转码后 OGG 的总时长，失败就返回 -1（进度条退化成不定长）。 */
     private static float readDuration(String file) {
         Path ogg = PackPaths.musicDir().resolve(MusicLibrary.trackId(file) + ".ogg");
+        // MP3 直读模式没有真 ogg，只能扫 mp3 帧头估时长
+        if (com.custommusic.audio.Mp3Fallback.isPlaceholder(ogg)) {
+            return com.custommusic.audio.Mp3Fallback.durationSeconds(
+                    CustomMusicClient.library().folder().resolve(file));
+        }
         if (!Files.isRegularFile(ogg)) {
             return -1f;
         }

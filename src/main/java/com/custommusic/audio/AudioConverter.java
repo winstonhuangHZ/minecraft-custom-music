@@ -31,8 +31,87 @@ public final class AudioConverter {
 
     private static Encoder detected;
     private static String detectedFor;
+    private static String resolvedFfmpeg;
 
     private AudioConverter() {
+    }
+
+    /**
+     * 找出可用的 ffmpeg：先看配置里写的，再试 PATH，最后扫常见安装位置。
+     * 返回 null 表示没找到（这时会退回到纯 Java 的 MP3 直读播放）。
+     */
+    public static synchronized String resolveFfmpeg(String configured) {
+        if (resolvedFfmpeg != null) {
+            return resolvedFfmpeg.isEmpty() ? null : resolvedFfmpeg;
+        }
+        // 配置里写 none/off/disabled 表示「明确不要用 ffmpeg」，直接走纯 Java 直读
+        if (configured != null && List.of("none", "off", "disabled", "disabled;")
+                .contains(configured.trim().toLowerCase(java.util.Locale.ROOT))) {
+            resolvedFfmpeg = "";
+            CustomMusicClient.LOG.info("配置里禁用了 ffmpeg，使用纯 Java 的 MP3 直读播放");
+            return null;
+        }
+
+        List<String> candidates = new ArrayList<>();
+        if (configured != null && !configured.isBlank()) {
+            candidates.add(configured.trim());
+        }
+        candidates.add("ffmpeg"); // PATH
+        candidates.addAll(commonFfmpegPaths());
+
+        for (String candidate : candidates) {
+            if (works(candidate)) {
+                resolvedFfmpeg = candidate;
+                if (!candidate.equals(configured)) {
+                    CustomMusicClient.LOG.info("自动找到 ffmpeg: {}", candidate);
+                }
+                return candidate;
+            }
+        }
+        resolvedFfmpeg = "";
+        CustomMusicClient.LOG.warn("没找到 ffmpeg，将使用纯 Java 的 MP3 直读播放（只支持 mp3/wav）");
+        return null;
+    }
+
+    private static boolean works(String candidate) {
+        try {
+            String out = run(candidate, "-version");
+            return out.contains("ffmpeg version") || out.contains("ffmpeg");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static List<String> commonFfmpegPaths() {
+        String os = System.getProperty("os.name", "").toLowerCase();
+        List<String> paths = new ArrayList<>();
+        if (os.contains("win")) {
+            String localAppData = System.getenv("LOCALAPPDATA");
+            String programFiles = System.getenv("ProgramFiles");
+            String userProfile = System.getenv("USERPROFILE");
+            String programData = System.getenv("ProgramData");
+            if (localAppData != null) {
+                paths.add(localAppData + "\\Microsoft\\WinGet\\Links\\ffmpeg.exe");
+            }
+            if (programFiles != null) {
+                paths.add(programFiles + "\\ffmpeg\\bin\\ffmpeg.exe");
+            }
+            if (userProfile != null) {
+                paths.add(userProfile + "\\scoop\\shims\\ffmpeg.exe");
+            }
+            if (programData != null) {
+                paths.add(programData + "\\chocolatey\\bin\\ffmpeg.exe");
+            }
+            paths.add("C:\\ffmpeg\\bin\\ffmpeg.exe");
+        } else {
+            paths.add("/opt/homebrew/bin/ffmpeg");   // macOS (Apple Silicon)
+            paths.add("/usr/local/bin/ffmpeg");      // macOS (Intel) / 手动编译
+            paths.add("/opt/local/bin/ffmpeg");      // MacPorts
+            paths.add("/usr/bin/ffmpeg");            // Linux
+            paths.add("/snap/bin/ffmpeg");
+            paths.add("/app/bin/ffmpeg");
+        }
+        return paths;
     }
 
     /** 探测可用的编码器，结果缓存。 */
@@ -60,6 +139,11 @@ public final class AudioConverter {
 
     public static boolean available(String ffmpeg) {
         return encoder(ffmpeg) != Encoder.MISSING;
+    }
+
+    /** 有没有可用的 ffmpeg（顺带做一次自动探测）。 */
+    public static boolean ffmpegPresent(String configured) {
+        return resolveFfmpeg(configured) != null;
     }
 
     /** 目标文件比源文件新就认为缓存有效。 */

@@ -96,9 +96,9 @@ public final class MusicScreen extends Screen {
         graphics.centeredText(this.font, this.title, this.width / 2, 12, 0xFFFFFFFF);
         graphics.centeredText(this.font, statusText(), this.width / 2, 28, 0xFFA0A0A0);
 
-        if (!AudioConverter.available(CustomMusicClient.config().ffmpegPath)) {
-            graphics.centeredText(this.font, Component.translatable("custommusic.hint.ffmpeg"),
-                    this.width / 2, 38, 0xFFFF5555);
+        if (!AudioConverter.ffmpegPresent(CustomMusicClient.config().ffmpegPath)) {
+            graphics.centeredText(this.font, Component.translatable("custommusic.hint.noFfmpeg"),
+                    this.width / 2, 38, 0xFFFFD080);
         } else if (CustomMusicClient.library().tracks().isEmpty()) {
             graphics.centeredText(this.font, Component.translatable("custommusic.hint.empty"),
                     this.width / 2, this.height / 2, 0xFFFFD080);

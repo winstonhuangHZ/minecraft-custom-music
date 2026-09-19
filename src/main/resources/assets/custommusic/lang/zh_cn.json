@@ -9,6 +9,7 @@
   "custommusic.state.active": "已生效",
   "custommusic.state.inactive": "未生效",
   "custommusic.hint.ffmpeg": "找不到 ffmpeg，无法转码 mp3（可改配置里的 ffmpegPath）",
+  "custommusic.hint.noFfmpeg": "没找到 ffmpeg：mp3 会用它直读播放，其它格式（flac/m4a…）仍需 ffmpeg",
   "custommusic.hint.empty": "还没有曲子，把音频文件放进音乐文件夹后点「重新扫描并转码」",
   "key.custommusic.open": "打开自定义音乐界面",
   "key.categories.custommusic.main": "自定义音乐",
