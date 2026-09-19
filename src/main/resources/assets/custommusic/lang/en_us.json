@@ -10,7 +10,7 @@
   "custommusic.state.inactive": "inactive",
   "custommusic.hint.ffmpeg": "ffmpeg not found — mp3 files cannot be converted (set ffmpegPath in config)",
   "custommusic.hint.empty": "No tracks yet — drop audio files into the music folder, then hit Rescan & Convert",
-  "custommusic.key.open": "Open Custom Music",
+  "key.custommusic.open": "Open Custom Music",
   "key.categories.custommusic.main": "Custom Music",
   "custommusic.button.preview": "Preview",
   "custommusic.button.playlists": "Playlists",
