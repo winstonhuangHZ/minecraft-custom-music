@@ -2,8 +2,11 @@ package com.custommusic.ui;
 
 import com.custommusic.CustomMusicClient;
 import com.custommusic.audio.AudioConverter;
+import com.custommusic.config.CustomMusicConfig;
 import com.custommusic.music.MusicLibrary;
+import com.custommusic.music.PlaylistEngine;
 import com.custommusic.pack.PackManager;
+import com.custommusic.playback.SituationalEngine;
 import com.custommusic.preview.PreviewPlayer;
 import com.custommusic.sync.MusicSync;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -19,6 +22,7 @@ public final class MusicScreen extends Screen {
 
     private final Screen parent;
     private TrackListWidget list;
+    private Button modeButton;
     private MusicSync.State lastSyncState = MusicSync.State.IDLE;
 
     public MusicScreen(Screen parent) {
@@ -38,16 +42,32 @@ public final class MusicScreen extends Screen {
         int topY = this.height - 52;
         int bottomY = this.height - 28;
         int third = Math.max(60, (this.width - 40 - gap * 2) / 3);
+        int quarter = Math.max(48, (this.width - 40 - gap * 3) / 4);
 
         addRenderableWidget(Button.builder(Component.translatable("custommusic.button.sync"),
                         button -> MusicSync.start())
-                .bounds(20, topY, third, 20).build());
+                .bounds(20, topY, quarter, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("custommusic.button.reload"),
                         button -> PackManager.enableAndReload())
-                .bounds(20 + third + gap, topY, third, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("custommusic.button.playlists"),
-                        button -> this.minecraft.setScreenAndShow(new PlaylistScreen(this)))
-                .bounds(20 + (third + gap) * 2, topY, third, 20).build());
+                .bounds(20 + quarter + gap, topY, quarter, 20).build());
+        addRenderableWidget(Button.builder(playScreenLabel(),
+                        button -> this.minecraft.setScreenAndShow(CustomMusicClient.config().isSituational()
+                                ? new SituationalScreen(this)
+                                : new PlaylistScreen(this)))
+                .bounds(20 + (quarter + gap) * 2, topY, quarter, 20).build());
+
+        // 切模式要重新生成资源包（播放器模式写覆盖事件，情境模式把覆盖撤掉），所以顺手重扫
+        modeButton = addRenderableWidget(Button.builder(modeLabel(), button -> {
+            CustomMusicConfig config = CustomMusicClient.config();
+            config.mode = config.isSituational()
+                    ? CustomMusicConfig.MODE_PLAYER
+                    : CustomMusicConfig.MODE_SITUATIONAL;
+            config.save();
+            PlaylistEngine.reset();
+            SituationalEngine.reset();
+            button.setMessage(modeLabel());
+            MusicSync.start();
+        }).bounds(20 + (quarter + gap) * 3, topY, quarter, 20).build());
 
         addRenderableWidget(Button.builder(Component.translatable("custommusic.button.enableAll"), button -> {
             CustomMusicClient.library().setAllEnabled(true);
@@ -95,6 +115,18 @@ public final class MusicScreen extends Screen {
                 : "custommusic.state.inactive");
         return Component.translatable("custommusic.status",
                 library.enabledCount(), library.tracks().size(), packState);
+    }
+
+    private Component playScreenLabel() {
+        return Component.translatable(CustomMusicClient.config().isSituational()
+                ? "custommusic.button.situational"
+                : "custommusic.button.playlists");
+    }
+
+    private Component modeLabel() {
+        return Component.translatable(CustomMusicClient.config().isSituational()
+                ? "custommusic.button.modeSituational"
+                : "custommusic.button.modePlayer");
     }
 
     @Override

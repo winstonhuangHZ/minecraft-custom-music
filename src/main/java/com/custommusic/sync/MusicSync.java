@@ -1,12 +1,16 @@
 package com.custommusic.sync;
 
 import com.custommusic.CustomMusicClient;
+import com.custommusic.config.CustomMusicConfig;
 import com.custommusic.music.MusicLibrary;
+import com.custommusic.pack.MusicEvents;
 import com.custommusic.pack.PackGenerator;
 import com.custommusic.pack.PackManager;
 import net.minecraft.client.Minecraft;
 
 import java.util.List;
+import java.util.Map;
+import java.util.SortedSet;
 
 /** 后台线程扫描 + 转码 + 生成资源包，完成后回主线程重载。 */
 public final class MusicSync {
@@ -59,18 +63,44 @@ public final class MusicSync {
         total = 0;
         lastErrors = List.of();
 
-        Thread thread = new Thread(MusicSync::work, "CustomMusic-Sync");
+        // 枚举配乐事件要读资源管理器，放在主线程做，别丢到工作线程里
+        Map<String, SortedSet<String>> events = resolveEvents();
+
+        Thread thread = new Thread(() -> work(events), "CustomMusic-Sync");
         thread.setDaemon(true);
         thread.start();
     }
 
-    private static void work() {
+    /** 决定这次要覆盖哪些配乐事件：全量枚举 or 配置里手写的那几个。 */
+    private static Map<String, SortedSet<String>> resolveEvents() {
+        CustomMusicConfig config = CustomMusicClient.config();
+        if (config.isSituational()) {
+            // 情境模式靠拦截游戏的选择来替换，不需要动原版事件，
+            // 未配置的情境就保持原版配乐
+            CustomMusicClient.LOG.info("情境模式：不覆盖原版配乐事件，按规则替换");
+            return new java.util.TreeMap<>();
+        }
+        Map<String, SortedSet<String>> events = config.overrideAllMusic
+                ? MusicEvents.discover()
+                : MusicEvents.fromConfig(config.overrideEvents);
+        if (events.isEmpty()) {
+            CustomMusicClient.LOG.warn("没枚举到配乐事件，退回配置里的 overrideEvents");
+            events = MusicEvents.fromConfig(config.overrideEvents);
+        }
+        MusicEvents.applyExclusions(events, config.overrideExclude);
+
+        int count = events.values().stream().mapToInt(SortedSet::size).sum();
+        CustomMusicClient.LOG.info("本次覆盖 {} 个配乐事件（覆盖全部配乐={}）", count, config.overrideAllMusic);
+        return events;
+    }
+
+    private static void work(Map<String, SortedSet<String>> events) {
         try {
             MusicLibrary library = CustomMusicClient.library();
             library.scan();
 
             PackGenerator.Result result = PackGenerator.generate(
-                    library, CustomMusicClient.config(),
+                    library, CustomMusicClient.config(), events,
                     (done, total, current) -> {
                         MusicSync.done = done;
                         MusicSync.total = total;

@@ -28,6 +28,11 @@ public final class PackPaths {
         return packDir().resolve("assets/minecraft/sounds.json");
     }
 
+    /** 每个命名空间一份覆盖用的 sounds.json（key 不能带命名空间，命名空间由目录决定）。 */
+    public static Path soundsJson(String namespace) {
+        return packDir().resolve("assets/" + namespace + "/sounds.json");
+    }
+
     /** 试听事件必须放在 custommusic 命名空间下。 */
     public static Path previewSoundsJson() {
         return packDir().resolve("assets/custommusic/sounds.json");

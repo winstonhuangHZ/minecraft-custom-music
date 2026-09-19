@@ -7,6 +7,7 @@ import com.custommusic.music.Playlist;
 import com.custommusic.music.PlaylistEngine;
 import com.custommusic.hud.NowPlaying;
 import com.custommusic.hud.NowPlayingCard;
+import com.custommusic.sync.MusicSync;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -21,6 +22,7 @@ public final class PlaylistScreen extends Screen {
     private PlaylistListWidget list;
     private Button shuffleButton;
     private Button hudButton;
+    private Button allMusicButton;
     private List<Playlist> playlists = List.of();
     private int selected = -1;
     private int refreshTimer;
@@ -33,16 +35,17 @@ public final class PlaylistScreen extends Screen {
     @Override
     protected void init() {
         int top = 58;
-        int listHeight = Math.max(40, this.height - top - 70);
+        int listHeight = Math.max(40, this.height - top - 92);
         this.list = new PlaylistListWidget(this, this.minecraft, this.width, listHeight, top, 24);
         addRenderableWidget(this.list);
         refresh();
 
         int gap = 6;
-        int rowY = this.height - 48;
-        int row2Y = this.height - 24;
+        int rowY = this.height - 72;
+        int row2Y = this.height - 48;
+        int row3Y = this.height - 24;
         int third = Math.max(70, (this.width - 40 - gap * 2) / 3);
-        int quarter = Math.max(52, (this.width - 40 - gap * 3) / 4);
+        int half = Math.max(70, (this.width - 40 - gap) / 2);
 
         addRenderableWidget(Button.builder(Component.translatable("custommusic.playlist.play"),
                         button -> playSelected())
@@ -60,21 +63,29 @@ public final class PlaylistScreen extends Screen {
             config.save();
             PlaylistEngine.reset();
             button.setMessage(shuffleLabel());
-        }).bounds(20, row2Y, quarter, 20).build());
+        }).bounds(20, row2Y, third, 20).build());
+
+        allMusicButton = addRenderableWidget(Button.builder(allMusicLabel(), button -> {
+            CustomMusicConfig config = CustomMusicClient.config();
+            config.overrideAllMusic = !config.overrideAllMusic;
+            config.save();
+            button.setMessage(allMusicLabel());
+            MusicSync.start();
+        }).bounds(20 + third + gap, row2Y, third, 20).build());
 
         hudButton = addRenderableWidget(Button.builder(hudLabel(), button -> {
             CustomMusicConfig config = CustomMusicClient.config();
             config.showHud = !config.showHud;
             config.save();
             button.setMessage(hudLabel());
-        }).bounds(20 + quarter + gap, row2Y, quarter, 20).build());
+        }).bounds(20 + (third + gap) * 2, row2Y, third, 20).build());
 
         addRenderableWidget(Button.builder(Component.translatable("custommusic.playlist.clear"),
                         button -> PlaylistEngine.clear())
-                .bounds(20 + (quarter + gap) * 2, row2Y, quarter, 20).build());
+                .bounds(20, row3Y, half, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("custommusic.playlist.back"),
                         button -> onClose())
-                .bounds(20 + (quarter + gap) * 3, row2Y, quarter, 20).build());
+                .bounds(20 + half + gap, row3Y, half, 20).build());
 
     }
 
@@ -88,6 +99,12 @@ public final class PlaylistScreen extends Screen {
         return Component.translatable(CustomMusicClient.config().showHud
                 ? "custommusic.playlist.hudOn"
                 : "custommusic.playlist.hudOff");
+    }
+
+    private Component allMusicLabel() {
+        return Component.translatable(CustomMusicClient.config().overrideAllMusic
+                ? "custommusic.button.allMusicOn"
+                : "custommusic.button.allMusicOff");
     }
 
     /** 重新读一次歌单（扫描完成后或切回本界面时）。 */

@@ -34,7 +34,8 @@ public final class PackGenerator {
     private PackGenerator() {
     }
 
-    public static Result generate(MusicLibrary library, CustomMusicConfig config, Progress progress)
+    public static Result generate(MusicLibrary library, CustomMusicConfig config,
+                                  java.util.Map<String, java.util.SortedSet<String>> events, Progress progress)
             throws IOException {
         List<CustomMusicConfig.TrackEntry> enabled = library.enabledTracks();
         Path musicDir = PackPaths.musicDir();
@@ -99,7 +100,7 @@ public final class PackGenerator {
         }
 
         pruneOrphans(musicDir, ids);
-        writeSoundsJson(config, ids);
+        writeOverrideSoundsJson(events, ids);
         writeLangFiles(names);
         writePackMeta(enabled.size());
 
@@ -129,11 +130,16 @@ public final class PackGenerator {
         }
     }
 
-    private static void writeSoundsJson(CustomMusicConfig config, List<String> ids) throws IOException {
-        List<String> blocks = new ArrayList<>();
-
-        if (!ids.isEmpty()) {
-            for (String event : config.overrideEvents) {
+    /**
+     * 生成覆盖用的 sounds.json。按命名空间分别写文件：
+     * key 只能是「路径」，命名空间由文件所在目录决定，所以 minecraft 的事件写进
+     * assets/minecraft/sounds.json，别的模组的写进它们自己的命名空间目录（资源包之间是合并的）。
+     */
+    private static void writeOverrideSoundsJson(java.util.Map<String, java.util.SortedSet<String>> events,
+                                                List<String> ids) throws IOException {
+        for (java.util.Map.Entry<String, java.util.SortedSet<String>> entry : events.entrySet()) {
+            List<String> blocks = new ArrayList<>();
+            for (String event : entry.getValue()) {
                 StringBuilder block = new StringBuilder();
                 block.append("  \"").append(event).append("\": {\n");
                 // replace:true 才会盖掉原版音乐，否则只是「追加」
@@ -147,13 +153,40 @@ public final class PackGenerator {
                 block.append("    ]\n  }");
                 blocks.add(block.toString());
             }
+
+            Path file = PackPaths.soundsJson(entry.getKey());
+            if (blocks.isEmpty()) {
+                Files.deleteIfExists(file);
+                continue;
+            }
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, "{\n" + String.join(",\n", blocks) + "\n}\n", StandardCharsets.UTF_8);
+            CustomMusicClient.LOG.info("覆盖 {} 命名空间下 {} 个配乐事件", entry.getKey(), blocks.size());
         }
 
-        Path file = PackPaths.soundsJson();
-        Files.createDirectories(file.getParent());
-        Files.writeString(file, "{\n" + String.join(",\n", blocks) + "\n}\n", StandardCharsets.UTF_8);
-
+        pruneStaleOverrideFiles(events.keySet());
         writeTrackSoundsJson(ids);
+    }
+
+    /**
+     * 删掉这次不再需要的覆盖文件。
+     * 情境模式下 events 是空的，所以切模式之后原来那份 assets/minecraft/sounds.json
+     * 会被清掉，原版配乐就恢复了（未配置的情境保持原样）。
+     */
+    private static void pruneStaleOverrideFiles(java.util.Set<String> namespaces) throws IOException {
+        Path assets = PackPaths.packDir().resolve("assets");
+        if (!Files.isDirectory(assets)) {
+            return;
+        }
+        try (var stream = Files.list(assets)) {
+            for (Path namespaceDir : stream.filter(Files::isDirectory).toList()) {
+                String namespace = namespaceDir.getFileName().toString();
+                if (namespaces.contains(namespace) || namespace.equals(PREVIEW_NAMESPACE)) {
+                    continue;
+                }
+                Files.deleteIfExists(namespaceDir.resolve("sounds.json"));
+            }
+        }
     }
 
     /**

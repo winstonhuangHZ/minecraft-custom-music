@@ -1,6 +1,7 @@
 package com.custommusic.mixin;
 
-import com.custommusic.music.PlaylistEngine;
+import com.custommusic.CustomMusicClient;
+import com.custommusic.playback.Playback;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
@@ -17,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * 让歌单接管背景音乐。
+ * 让模组接管背景音乐（播放器模式按歌单队列，情境模式按情境规则）。
  *
  * <p>原版每次要开一首新歌都会走 {@code startPlaying(Music)}，这里抢先一步改成放歌单里的曲子；
  * 另外原版在一首歌放完之后会等「情境音乐的最大间隔」才开下一首（可能十几分钟），
@@ -37,11 +38,11 @@ public abstract class MusicManagerMixin {
     private Minecraft minecraft;
 
     @Inject(method = "startPlaying", at = @At("HEAD"), cancellable = true)
-    private void custommusic$playFromPlaylist(Music music, CallbackInfo ci) {
-        if (!PlaylistEngine.active()) {
+    private void custommusic$takeOver(Music music, CallbackInfo ci) {
+        if (!Playback.active()) {
             return;
         }
-        PlaylistEngine.Pick pick = PlaylistEngine.nextPick();
+        Playback.Pick pick = Playback.next(music);
         if (pick == null) {
             return;
         }
@@ -53,17 +54,17 @@ public abstract class MusicManagerMixin {
         if (result == SoundEngine.PlayResult.NOT_STARTED) {
             // 多半是资源包正在重载，放回队列，一秒后重试
             this.currentMusic = null;
-            if (PlaylistEngine.requeue(pick.file())) {
-                this.nextSongDelay = PlaylistEngine.retryDelayTicks();
+            if (Playback.requeue(pick.file())) {
+                this.nextSongDelay = Playback.retryDelayTicks();
             }
             ci.cancel();
             return;
         }
 
-        com.custommusic.CustomMusicClient.LOG.info("歌单播放 {} -> {}",
+        CustomMusicClient.LOG.info("接管播放 {} -> {}",
                 pick.event().location(), result);
-        PlaylistEngine.noteSuccess();
-        PlaylistEngine.markStarted(instance);
+        Playback.noteSuccess();
+        Playback.markStarted(instance);
         if (result == SoundEngine.PlayResult.STARTED) {
             this.minecraft.gui.toastManager().showNowPlayingToast();
         }
@@ -80,16 +81,19 @@ public abstract class MusicManagerMixin {
     @Inject(method = "canReplace", at = @At("HEAD"), cancellable = true)
     private static void custommusic$keepOurMusic(Music music, SoundInstance instance,
                                                  CallbackInfoReturnable<Boolean> cir) {
-        if (PlaylistEngine.isOurInstance(instance)) {
+        if (Playback.isOurInstance(instance)) {
             cir.setReturnValue(false);
         }
     }
 
     @Inject(method = "tick", at = @At("TAIL"))
     private void custommusic$shortenGap(CallbackInfo ci) {
-        if (!PlaylistEngine.active() || this.currentMusic != null) {
+        if (this.currentMusic != null) {
             return;
         }
-        this.nextSongDelay = Math.min(this.nextSongDelay, PlaylistEngine.gapTicks());
+        // 只有我们自己放的那首结束了才压缩间隔；原版音乐保持原版的间隔
+        if (Playback.consumeOurTrackEnded()) {
+            this.nextSongDelay = Math.min(this.nextSongDelay, Playback.gapTicks());
+        }
     }
 }

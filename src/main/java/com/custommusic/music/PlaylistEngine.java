@@ -27,9 +27,6 @@ public final class PlaylistEngine {
     private static String loadedPlaylistId;
     private static String currentTrack;
     private static CustomMusicConfig.TrackEntry lastPicked;
-    private static String lastFailed;
-    private static int failCount;
-    private static SoundInstance currentInstance;
     private static long playlistStartedAt;
     private static int playedInPlaylist;
 
@@ -47,19 +44,6 @@ public final class PlaylistEngine {
     }
 
     /** 记下我们启动的声音实例，用来识别「现在放的是我们的歌」。 */
-    public static void markStarted(SoundInstance instance) {
-        currentInstance = instance;
-    }
-
-    /**
-     * 这个实例是不是我们正在放的歌。
-     * 原版 MusicManager.canReplace() 只比较事件 id：我们的自定义事件和情境音乐
-     * （菜单音乐、群系音乐）永远不相等，于是它会在下一个 tick 就把我们的歌停掉，
-     * 表现出来就是「每首只放一秒」。这里识别出来交给 mixin 挡掉。
-     */
-    public static boolean isOurInstance(SoundInstance instance) {
-        return instance != null && instance == currentInstance;
-    }
 
     public static String currentPlaylistId() {
         CustomMusicConfig config = CustomMusicClient.config();
@@ -72,10 +56,6 @@ public final class PlaylistEngine {
 
     public static int playedInPlaylist() {
         return playedInPlaylist;
-    }
-
-    public static int gapTicks() {
-        return Math.max(0, CustomMusicClient.config().trackGapSeconds) * 20;
     }
 
     // ------------------------------------------------------------ 队列操作
@@ -136,58 +116,22 @@ public final class PlaylistEngine {
 
     // ------------------------------------------------------------ 选曲
 
-    /** 一次选曲的结果。 */
-    public record Pick(String file, SoundEvent event) {
-    }
-
     /** 选下一首；null 表示这次不接管，交回原版。 */
-    public static Pick nextPick() {
+    public static com.custommusic.playback.Playback.Pick nextPick() {
         String file = pick();
         if (file == null) {
             return null;
         }
-        Identifier id = Identifier.fromNamespaceAndPath(
-                PackGenerator.PREVIEW_NAMESPACE,
-                PackGenerator.TRACK_PREFIX + MusicLibrary.trackId(file));
-        return new Pick(file, SoundEvent.createVariableRangeEvent(id));
+        return com.custommusic.playback.Playback.pickOf(file);
     }
 
-    /**
-     * 播放失败时把这首放回队首重试。
-     *
-     * <p>最典型的场景：模组启动时会重载资源包，重载期间 SoundEngine 处于未加载状态，
-     * 任何播放请求都会返回 NOT_STARTED。这种情况不能当成「这首放完了」，
-     * 否则整个队列会被瞬间消耗光。同一首连续失败 3 次才真正丢掉。
-     */
-    public static boolean requeue(String file) {
-        if (file.equals(lastFailed)) {
-            if (++failCount >= 10) {
-                CustomMusicClient.LOG.warn("{} 连续播放失败，跳过", file);
-                noteSuccess();
-                return false;
-            }
-        } else {
-            lastFailed = file;
-            failCount = 1;
-        }
-
+    /** 播放失败时把这首放回队首（是否继续重试由 Playback 判断）。 */
+    public static void requeue(String file) {
         if (lastPicked != null && lastPicked.file.equals(file)) {
             pending.addFirst(lastPicked);
             playedInPlaylist = Math.max(0, playedInPlaylist - 1);
         }
         currentTrack = null;
-        return true;
-    }
-
-    /** 重试播放的间隔：前几次短一点，好尽快穿过资源重载窗口。 */
-    public static int retryDelayTicks() {
-        return failCount <= 3 ? 5 : 20;
-    }
-
-    /** 播放成功，清掉失败计数。 */
-    public static void noteSuccess() {
-        lastFailed = null;
-        failCount = 0;
     }
 
     private static String pick() {
