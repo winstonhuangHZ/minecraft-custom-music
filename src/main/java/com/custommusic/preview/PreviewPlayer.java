@@ -62,4 +62,18 @@ public final class PreviewPlayer {
         currentId = null;
         NowPlaying.onStopped();
     }
+
+    /** 只停声音，不动 HUD 状态（歌单队列接管时用，免得两首一起响）。 */
+    public static void stopQuietly() {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (current != null && minecraft != null) {
+            minecraft.getSoundManager().stop(current);
+        }
+        current = null;
+        currentId = null;
+    }
+
+    public static boolean isActive() {
+        return current != null;
+    }
 }

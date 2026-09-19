@@ -33,22 +33,25 @@ public final class MusicScreen extends Screen {
     @Override
     protected void init() {
         int listTop = 46;
-        int listHeight = Math.max(40, this.height - listTop - 60);
+        int listHeight = Math.max(40, this.height - listTop - 84);
         this.list = new TrackListWidget(this, this.minecraft, this.width, listHeight, listTop, 24);
         this.list.reload();
         addRenderableWidget(this.list);
 
         int gap = 6;
-        int topY = this.height - 52;
+        int topY = this.height - 76;
+        int middleY = this.height - 52;
         int bottomY = this.height - 28;
         int third = Math.max(60, (this.width - 40 - gap * 2) / 3);
         int quarter = Math.max(48, (this.width - 40 - gap * 3) / 4);
 
-        addRenderableWidget(Button.builder(Component.translatable("custommusic.button.sync"),
-                        button -> MusicSync.start())
-                .bounds(20, topY, quarter, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("custommusic.button.reload"),
-                        button -> PackManager.enableAndReload())
+        // 第一行放最要紧的：开始播放 / 停止
+        addRenderableWidget(Button.builder(Component.translatable("custommusic.button.playAll"), button -> {
+            PlaylistEngine.playAll();
+            this.onClose();
+        }).bounds(20, topY, quarter, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("custommusic.button.stop"),
+                        button -> PlaylistEngine.stopPlayback())
                 .bounds(20 + quarter + gap, topY, quarter, 20).build());
         addRenderableWidget(Button.builder(playScreenLabel(),
                         button -> this.minecraft.setScreenAndShow(CustomMusicClient.config().isSituational()
@@ -69,17 +72,25 @@ public final class MusicScreen extends Screen {
             MusicSync.start();
         }).bounds(20 + (quarter + gap) * 3, topY, quarter, 20).build());
 
+        addRenderableWidget(Button.builder(Component.translatable("custommusic.button.sync"),
+                        button -> MusicSync.start())
+                .bounds(20, middleY, quarter, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("custommusic.button.reload"),
+                        button -> PackManager.enableAndReload())
+                .bounds(20 + quarter + gap, middleY, quarter, 20).build());
+
         addRenderableWidget(Button.builder(Component.translatable("custommusic.button.enableAll"), button -> {
             CustomMusicClient.library().setAllEnabled(true);
             refresh();
-        }).bounds(20, bottomY, third, 20).build());
+        }).bounds(20 + (quarter + gap) * 2, middleY, quarter, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("custommusic.button.disableAll"), button -> {
             CustomMusicClient.library().setAllEnabled(false);
             refresh();
-        }).bounds(20 + third + gap, bottomY, third, 20).build());
+        }).bounds(20 + (quarter + gap) * 3, middleY, quarter, 20).build());
+
         addRenderableWidget(Button.builder(Component.translatable("custommusic.button.folder"),
                         button -> openMusicFolder())
-                .bounds(20 + (third + gap) * 2, bottomY, third, 20).build());
+                .bounds(20, bottomY, this.width - 40, 20).build());
     }
 
     /** 曲目列表变化后重建（上移、下移、扫描完成后调用）。 */
@@ -102,6 +113,9 @@ public final class MusicScreen extends Screen {
         } else if (CustomMusicClient.library().tracks().isEmpty()) {
             graphics.centeredText(this.font, Component.translatable("custommusic.hint.empty"),
                     this.width / 2, this.height / 2, 0xFFFFD080);
+        } else {
+            graphics.centeredText(this.font, Component.translatable("custommusic.hint.usage"),
+                    this.width / 2, 34, 0xFF9FE0A0);
         }
     }
 
@@ -156,7 +170,6 @@ public final class MusicScreen extends Screen {
 
     @Override
     public void onClose() {
-        PreviewPlayer.stop();
         this.minecraft.setScreenAndShow(this.parent);
     }
 }

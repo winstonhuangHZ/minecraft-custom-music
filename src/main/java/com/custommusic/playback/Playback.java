@@ -7,6 +7,7 @@ import com.custommusic.music.MusicLibrary;
 import com.custommusic.music.PlaylistEngine;
 import com.custommusic.pack.PackGenerator;
 import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.Music;
 import net.minecraft.sounds.SoundEvent;
@@ -125,6 +126,21 @@ public final class Playback {
     public static void noteSuccess() {
         lastFailed = null;
         failCount = 0;
+    }
+
+    /** 立刻停掉当前这首（界面上的「停止播放」）。 */
+    public static void stopCurrent() {
+        if (currentInstance != null) {
+            Minecraft minecraft = Minecraft.getInstance();
+            if (minecraft != null) {
+                minecraft.getSoundManager().stop(currentInstance);
+            }
+        }
+        currentInstance = null;
+        ourTrackPending = false;
+        lastFailed = null;
+        failCount = 0;
+        NowPlaying.onStopped();
     }
 
     /**

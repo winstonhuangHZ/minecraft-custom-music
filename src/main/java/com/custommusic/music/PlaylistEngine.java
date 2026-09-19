@@ -140,11 +140,12 @@ public final class PlaylistEngine {
         // 队列里可能有已经被删掉的歌单，最多绕几圈避免死循环
         for (int guard = 0; guard < 64; guard++) {
             List<Playlist> playlists = CustomMusicClient.library().playlists();
-            if (playlists.isEmpty() || config.queue.isEmpty()) {
+            if (config.queue.isEmpty()) {
                 return null;
             }
 
-            Playlist current = MusicLibrary.findPlaylist(playlists, currentPlaylistId());
+            // 队列里存的是「选择器」：可以是歌单 id，也可以是单个曲目文件
+            Playlist current = resolveSelector(playlists, currentPlaylistId());
             if (current == null) {
                 config.queue.remove(Math.min(config.queueIndex, config.queue.size() - 1));
                 if (config.queueIndex >= config.queue.size()) {
@@ -169,10 +170,47 @@ public final class PlaylistEngine {
             playedInPlaylist++;
             currentTrack = entry.file;
             lastPicked = entry;
+            // 队列接管时把试听停掉，免得两首一起响
+            com.custommusic.preview.PreviewPlayer.stopQuietly();
             NowPlaying.onTrackStarted(entry.file);
             return entry.file;
         }
         return null;
+    }
+
+    /** 把队列里的一项解析成歌单：是歌单 id 就用整张，是单个曲目文件就包成一首的歌单。 */
+    private static Playlist resolveSelector(List<Playlist> playlists, String selector) {
+        Playlist playlist = MusicLibrary.findPlaylist(playlists, selector);
+        if (playlist != null) {
+            return playlist;
+        }
+        for (CustomMusicConfig.TrackEntry entry : CustomMusicClient.library().enabledTracks()) {
+            if (entry.file.equals(selector)) {
+                return new Playlist(selector, MusicLibrary.displayName(selector), List.of(entry));
+            }
+        }
+        return null;
+    }
+
+    /** 立即播放当前所有启用的曲目（界面上的「播放全部」）。 */
+    public static void playAll() {
+        List<String> files = CustomMusicClient.library().enabledTracks().stream()
+                .map(entry -> entry.file)
+                .collect(java.util.stream.Collectors.toList());
+        if (files.isEmpty()) {
+            return;
+        }
+        CustomMusicConfig config = CustomMusicClient.config();
+        config.queue = new ArrayList<>(files);
+        config.queueIndex = 0;
+        config.save();
+        reset();
+    }
+
+    /** 停止播放：清空队列并立刻停掉当前这首。 */
+    public static void stopPlayback() {
+        clear();
+        com.custommusic.playback.Playback.stopCurrent();
     }
 
     private static boolean limitsReached(CustomMusicConfig config) {

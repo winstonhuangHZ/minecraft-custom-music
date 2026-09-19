@@ -82,10 +82,13 @@ public final class PlaylistScreen extends Screen {
 
         addRenderableWidget(Button.builder(Component.translatable("custommusic.playlist.clear"),
                         button -> PlaylistEngine.clear())
-                .bounds(20, row3Y, half, 20).build());
+                .bounds(20, row3Y, third, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("custommusic.button.stop"),
+                        button -> PlaylistEngine.stopPlayback())
+                .bounds(20 + third + gap, row3Y, third, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("custommusic.playlist.back"),
                         button -> onClose())
-                .bounds(20 + half + gap, row3Y, half, 20).build());
+                .bounds(20 + (third + gap) * 2, row3Y, third, 20).build());
 
     }
 
