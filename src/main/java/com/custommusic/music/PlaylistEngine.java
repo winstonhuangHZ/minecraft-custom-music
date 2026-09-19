@@ -63,6 +63,8 @@ public final class PlaylistEngine {
     /** 立刻改放这张歌单（清空原队列）。 */
     public static void playNow(String playlistId) {
         CustomMusicConfig config = CustomMusicClient.config();
+        // 立刻打断当前这首，不然要等它放完才会切，看起来像「点了没反应」
+        com.custommusic.playback.Playback.stopCurrent();
         config.queue = new ArrayList<>(List.of(playlistId));
         config.queueIndex = 0;
         config.save();
@@ -201,6 +203,7 @@ public final class PlaylistEngine {
             return;
         }
         CustomMusicConfig config = CustomMusicClient.config();
+        com.custommusic.playback.Playback.stopCurrent();
         config.queue = new ArrayList<>(files);
         config.queueIndex = 0;
         config.save();
@@ -212,6 +215,7 @@ public final class PlaylistEngine {
         clear();
         com.custommusic.playback.Playback.stopCurrent();
     }
+
 
     private static boolean limitsReached(CustomMusicConfig config) {
         if (playedInPlaylist == 0) {

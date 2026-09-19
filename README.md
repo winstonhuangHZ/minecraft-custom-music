@@ -72,7 +72,7 @@ Minecraft + Fabric Loader + 本模组，用 `M` 键进界面。
 
 ## 安装
 
-1. 装好 Fabric Loader，把 `custom-music-1.0.1.jar` 丢进 `mods/`（Fabric API 不需要，ModMenu 可选）
+1. 装好 Fabric Loader，把 `custom-music-1.0.2.jar` 丢进 `mods/`（Fabric API 不需要，ModMenu 可选）
 2. 启动一次游戏，会生成 `.minecraft/config/custommusic/music/`
 3. 把你的歌丢进那个文件夹
 4. 游戏里按 `M` 打开界面，点「重新扫描并转码」

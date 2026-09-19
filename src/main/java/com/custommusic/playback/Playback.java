@@ -137,7 +137,8 @@ public final class Playback {
             }
         }
         currentInstance = null;
-        ourTrackPending = false;
+        // 让 tick 钩子把间隔压成配置的秒数，下一首很快就会接上（队列空的时候无所谓）
+        ourTrackPending = true;
         lastFailed = null;
         failCount = 0;
         NowPlaying.onStopped();

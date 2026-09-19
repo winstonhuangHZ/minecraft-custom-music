@@ -67,6 +67,13 @@ public final class MusicLibrary {
             }
         }
 
+        // 一次性修顺序：老版本是按字典序排的（1 -> 10 -> 11 -> 2）。
+        // 如果现在的顺序恰好还是那个字典序，说明用户没手动调过，就按自然序重排一次。
+        if (looksLikeLegacyOrder(merged)) {
+            merged.sort((a, b) -> compareNatural(a.file, b.file));
+            CustomMusicClient.LOG.info("检测到旧的字典序，已按文件名自然顺序重排");
+        }
+
         boolean changed = merged.size() != config.tracks.size();
         if (!changed) {
             for (int i = 0; i < merged.size(); i++) {
@@ -94,7 +101,7 @@ public final class MusicLibrary {
             return walk.filter(Files::isRegularFile)
                     .filter(p -> !isHidden(p, dir))
                     .filter(p -> AUDIO_EXTENSIONS.contains(extension(p)))
-                    .sorted()
+                    .sorted(Comparator.comparing(Path::toString, MusicLibrary::compareNatural))
                     .collect(Collectors.toList());
         } catch (IOException e) {
             CustomMusicClient.LOG.error("遍历音乐文件夹失败", e);
@@ -140,8 +147,24 @@ public final class MusicLibrary {
         List<Playlist> result = new ArrayList<>();
         grouped.forEach((folder, entries) ->
                 result.add(new Playlist(folder, nameOf(folder), List.copyOf(entries))));
-        result.sort(Comparator.comparing(Playlist::name, String.CASE_INSENSITIVE_ORDER));
+        result.sort((a, b) -> compareNatural(a.name(), b.name()));
         return result;
+    }
+
+    /** 这个顺序是不是还停留在旧的字典序（说明没人手动调过）。 */
+    private static boolean looksLikeLegacyOrder(List<CustomMusicConfig.TrackEntry> entries) {
+        if (entries.size() < 2) {
+            return false;
+        }
+        List<String> current = entries.stream().map(e -> e.file).collect(Collectors.toList());
+        List<String> lexicographic = new ArrayList<>(current);
+        lexicographic.sort(Comparator.naturalOrder());
+        if (!current.equals(lexicographic)) {
+            return false;
+        }
+        List<String> natural = new ArrayList<>(current);
+        natural.sort(MusicLibrary::compareNatural);
+        return !current.equals(natural);
     }
 
     public static Playlist findPlaylist(List<Playlist> playlists, String id) {
@@ -164,6 +187,55 @@ public final class MusicLibrary {
         }
         int slash = folder.lastIndexOf('/');
         return slash < 0 ? folder : folder.substring(slash + 1);
+    }
+
+    /**
+     * 自然序比较：让 "2.mp3" 排在 "10.mp3" 前面。
+     * 默认的字符串比较是逐字符的，所以会出现 1 -> 10 -> 11 -> 2 这种反直觉顺序。
+     */
+    public static int compareNatural(String a, String b) {
+        int i = 0;
+        int j = 0;
+        while (i < a.length() && j < b.length()) {
+            char ca = a.charAt(i);
+            char cb = b.charAt(j);
+            if (Character.isDigit(ca) && Character.isDigit(cb)) {
+                int startA = i;
+                int startB = j;
+                while (i < a.length() && Character.isDigit(a.charAt(i))) {
+                    i++;
+                }
+                while (j < b.length() && Character.isDigit(b.charAt(j))) {
+                    j++;
+                }
+                String numA = stripLeadingZeros(a.substring(startA, i));
+                String numB = stripLeadingZeros(b.substring(startB, j));
+                int byLength = Integer.compare(numA.length(), numB.length());
+                if (byLength != 0) {
+                    return byLength;
+                }
+                int byValue = numA.compareTo(numB);
+                if (byValue != 0) {
+                    return byValue;
+                }
+            } else {
+                int byChar = Character.compare(Character.toLowerCase(ca), Character.toLowerCase(cb));
+                if (byChar != 0) {
+                    return byChar;
+                }
+                i++;
+                j++;
+            }
+        }
+        return Integer.compare(a.length() - i, b.length() - j);
+    }
+
+    private static String stripLeadingZeros(String value) {
+        int start = 0;
+        while (start < value.length() - 1 && value.charAt(start) == '0') {
+            start++;
+        }
+        return value.substring(start);
     }
 
     public int enabledCount() {

@@ -116,6 +116,10 @@ public final class PlaylistScreen extends Screen {
         if (selected >= playlists.size()) {
             selected = playlists.isEmpty() ? -1 : playlists.size() - 1;
         }
+        // 默认选中第一张，这样「立即播放选中的」不会因为没选而毫无反应
+        if (selected < 0 && !playlists.isEmpty()) {
+            selected = 0;
+        }
         if (this.list != null) {
             this.list.reload(playlists, selected);
         }
@@ -135,15 +139,28 @@ public final class PlaylistScreen extends Screen {
     }
 
     private void playSelected() {
-        if (selected >= 0 && selected < playlists.size()) {
-            playPlaylist(playlists.get(selected));
+        Playlist target = selectedOrFirst();
+        if (target != null) {
+            playPlaylist(target);
         }
     }
 
     private void enqueueSelected() {
-        if (selected >= 0 && selected < playlists.size()) {
-            enqueuePlaylist(playlists.get(selected));
+        Playlist target = selectedOrFirst();
+        if (target != null) {
+            enqueuePlaylist(target);
         }
+    }
+
+    /** 选中的那张；一个都没选就用第一张，避免按钮点了没反应。 */
+    private Playlist selectedOrFirst() {
+        if (playlists.isEmpty()) {
+            return null;
+        }
+        if (selected >= 0 && selected < playlists.size()) {
+            return playlists.get(selected);
+        }
+        return playlists.get(0);
     }
 
     @Override

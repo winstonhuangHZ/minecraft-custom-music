@@ -107,5 +107,6 @@ public final class CustomMusicClient implements ClientModInitializer {
                 minecraft.setScreenAndShow(new MusicScreen(minecraft.gui.screen()));
             }
         }
+
     }
 }
